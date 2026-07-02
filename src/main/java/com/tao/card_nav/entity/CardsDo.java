@@ -25,6 +25,8 @@ public class CardsDo {
 
     private Long categoryId;
 
+    private String category;   // 联表查出 category.name
+
     private String sidebarId;
 
     private String favicon;

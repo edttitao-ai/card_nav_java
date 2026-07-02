@@ -8,6 +8,7 @@
     <result column="url" jdbcType="VARCHAR" property="url" />
     <result column="description" jdbcType="VARCHAR" property="description" />
     <result column="category_id" jdbcType="BIGINT" property="categoryId" />
+    <result column="category_name" jdbcType="VARCHAR" property="category" />
     <result column="sidebar_id" jdbcType="VARCHAR" property="sidebarId" />
     <result column="favicon" jdbcType="VARCHAR" property="favicon" />
     <result column="pinned" jdbcType="BIT" property="pinned" />
@@ -20,20 +21,23 @@
     created_at, updated_at, deleted_at
   </sql>
   <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
-    select <include refid="Base_Column_List" />
+    select cards.*, c.name as category_name
     from cards
-    where id = #{id,jdbcType=BIGINT} AND deleted_at IS NULL
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.id = #{id,jdbcType=BIGINT} AND cards.deleted_at IS NULL
   </select>
   <select id="selectBySidebarId" parameterType="java.lang.String" resultMap="BaseResultMap">
-    select <include refid="Base_Column_List" />
+    select cards.*, c.name as category_name
     from cards
-    where sidebar_id = #{sidebarId,jdbcType=VARCHAR} AND deleted_at IS NULL
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.sidebar_id = #{sidebarId,jdbcType=VARCHAR} AND cards.deleted_at IS NULL
     order by pinned DESC, updated_at DESC
   </select>
   <select id="selectAll" resultMap="BaseResultMap">
-    select <include refid="Base_Column_List" />
+    select cards.*, c.name as category_name
     from cards
-    where deleted_at IS NULL
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.deleted_at IS NULL
     order by pinned DESC, updated_at DESC
   </select>
   <select id="selectCategoryStats" resultType="com.tao.card_nav.domain.CategoryStats">
