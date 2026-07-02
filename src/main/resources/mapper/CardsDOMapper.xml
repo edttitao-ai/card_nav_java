@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tao.card_nav.mapper.CardsDoMapper">
+  <resultMap id="BaseResultMap" type="com.tao.card_nav.entity.CardsDo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="external_id" jdbcType="VARCHAR" property="externalId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="category_id" jdbcType="BIGINT" property="categoryId" />
+    <result column="sidebar_id" jdbcType="VARCHAR" property="sidebarId" />
+    <result column="favicon" jdbcType="VARCHAR" property="favicon" />
+    <result column="pinned" jdbcType="BIT" property="pinned" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="deleted_at" jdbcType="TIMESTAMP" property="deletedAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, external_id, title, url, description, category_id, sidebar_id, favicon, pinned, 
+    created_at, updated_at, deleted_at
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from cards
+    where id = #{id,jdbcType=BIGINT} AND deleted_at IS NULL
+  </select>
+  <select id="selectBySidebarId" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from cards
+    where sidebar_id = #{sidebarId,jdbcType=VARCHAR} AND deleted_at IS NULL
+    order by pinned DESC, updated_at DESC
+  </select>
+  <select id="selectAll" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from cards
+    where deleted_at IS NULL
+    order by pinned DESC, updated_at DESC
+  </select>
+  <select id="selectCategoryStats" resultType="com.tao.card_nav.domain.CategoryStats">
+    SELECT 
+      c.name as name,
+      COUNT(cr.id) as cardCount,
+      COALESCE(SUM(cl.count), 0) as clickCount
+    FROM category c
+    LEFT JOIN cards cr ON c.id = cr.category_id AND cr.deleted_at IS NULL
+    LEFT JOIN clicks cl ON cr.id = cl.card_id
+    GROUP BY c.id, c.name, c.sort_order
+    ORDER BY c.sort_order ASC
+  </select>
+  <insert id="insert" parameterType="com.tao.card_nav.entity.CardsDo">
+    insert into cards (id, external_id, title, url, description, category_id, 
+      sidebar_id, favicon, pinned, created_at, updated_at, deleted_at)
+    values (#{id,jdbcType=BIGINT}, #{externalId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
+      #{url,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{categoryId,jdbcType=BIGINT}, 
+      #{sidebarId,jdbcType=VARCHAR}, #{favicon,jdbcType=VARCHAR}, #{pinned,jdbcType=BIT}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{deletedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.CardsDo">
+    insert into cards
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="externalId != null">external_id,</if>
+      <if test="title != null">title,</if>
+      <if test="url != null">url,</if>
+      <if test="description != null">description,</if>
+      <if test="categoryId != null">category_id,</if>
+      <if test="sidebarId != null">sidebar_id,</if>
+      <if test="favicon != null">favicon,</if>
+      <if test="pinned != null">pinned,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedAt != null">updated_at,</if>
+      <if test="deletedAt != null">deleted_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=BIGINT},</if>
+      <if test="externalId != null">#{externalId,jdbcType=VARCHAR},</if>
+      <if test="title != null">#{title,jdbcType=VARCHAR},</if>
+      <if test="url != null">#{url,jdbcType=VARCHAR},</if>
+      <if test="description != null">#{description,jdbcType=VARCHAR},</if>
+      <if test="categoryId != null">#{categoryId,jdbcType=BIGINT},</if>
+      <if test="sidebarId != null">#{sidebarId,jdbcType=VARCHAR},</if>
+      <if test="favicon != null">#{favicon,jdbcType=VARCHAR},</if>
+      <if test="pinned != null">#{pinned,jdbcType=BIT},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+      <if test="deletedAt != null">#{deletedAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.tao.card_nav.entity.CardsDo">
+    update cards
+    <set>
+      <if test="externalId != null">external_id = #{externalId,jdbcType=VARCHAR},</if>
+      <if test="title != null">title = #{title,jdbcType=VARCHAR},</if>
+      <if test="url != null">url = #{url,jdbcType=VARCHAR},</if>
+      <if test="description != null">description = #{description,jdbcType=VARCHAR},</if>
+      <if test="categoryId != null">category_id = #{categoryId,jdbcType=BIGINT},</if>
+      <if test="sidebarId != null">sidebar_id = #{sidebarId,jdbcType=VARCHAR},</if>
+      <if test="favicon != null">favicon = #{favicon,jdbcType=VARCHAR},</if>
+      <if test="pinned != null">pinned = #{pinned,jdbcType=BIT},</if>
+      <if test="createdAt != null">created_at = #{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+      <if test="deletedAt != null">deleted_at = #{deletedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=BIGINT} AND deleted_at IS NULL
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.tao.card_nav.entity.CardsDo">
+    update cards
+    set external_id = #{externalId,jdbcType=VARCHAR},
+      title = #{title,jdbcType=VARCHAR},
+      url = #{url,jdbcType=VARCHAR},
+      description = #{description,jdbcType=VARCHAR},
+      category_id = #{categoryId,jdbcType=BIGINT},
+      sidebar_id = #{sidebarId,jdbcType=VARCHAR},
+      favicon = #{favicon,jdbcType=VARCHAR},
+      pinned = #{pinned,jdbcType=BIT},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      deleted_at = #{deletedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT} AND deleted_at IS NULL
+  </update>
+  <update id="softDelete" parameterType="java.lang.Long">
+    update cards
+    set deleted_at = NOW()
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="softDeleteBySidebarId" parameterType="java.lang.String">
+    update cards
+    set deleted_at = NOW()
+    where sidebar_id = #{sidebarId,jdbcType=VARCHAR} AND deleted_at IS NULL
+  </update>
+</mapper>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tao.card_nav.mapper.ClicksDoMapper">
+  <resultMap id="BaseResultMap" type="com.tao.card_nav.entity.ClicksDo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="card_id" jdbcType="VARCHAR" property="cardId" />
+    <result column="count" jdbcType="BIGINT" property="count" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Base_Column_List">id, card_id, count, created_at, updated_at</sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from clicks
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <select id="selectByCardId" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from clicks
+    where card_id = #{cardId,jdbcType=VARCHAR}
+  </select>
+  <select id="selectAll" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from clicks
+    order by count DESC
+  </select>
+  <insert id="insert" parameterType="com.tao.card_nav.entity.ClicksDo">
+    insert into clicks (id, card_id, count, created_at, updated_at)
+    values (#{id,jdbcType=BIGINT}, #{cardId,jdbcType=VARCHAR}, #{count,jdbcType=BIGINT},
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.ClicksDo">
+    insert into clicks
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="cardId != null">card_id,</if>
+      <if test="count != null">count,</if>
+      <if test="createdAt != null">created_at,</if>
+      <if test="updatedAt != null">updated_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=BIGINT},</if>
+      <if test="cardId != null">#{cardId,jdbcType=VARCHAR},</if>
+      <if test="count != null">#{count,jdbcType=BIGINT},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">#{updatedAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.tao.card_nav.entity.ClicksDo">
+    update clicks
+    <set>
+      <if test="cardId != null">card_id = #{cardId,jdbcType=VARCHAR},</if>
+      <if test="count != null">count = #{count,jdbcType=BIGINT},</if>
+      <if test="createdAt != null">created_at = #{createdAt,jdbcType=TIMESTAMP},</if>
+      <if test="updatedAt != null">updated_at = #{updatedAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.tao.card_nav.entity.ClicksDo">
+    update clicks
+    set card_id = #{cardId,jdbcType=VARCHAR},
+      count = #{count,jdbcType=BIGINT},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="incrementCount" parameterType="java.lang.String">
+    update clicks
+    set count = count + 1, updated_at = NOW()
+    where card_id = #{cardId,jdbcType=VARCHAR}
+  </update>
+  <select id="selectAllWithCard" resultType="com.tao.card_nav.domain.ClickWithCard">
+    SELECT
+      a.card_id as cardId,
+      b.title as cardTitle,
+      b.sidebar_id as sidebarId,
+      d.label as sidebarLabel,
+      c.name as category,
+      favicon as favicon,
+      count as count
+    FROM clicks a
+      left join cards b on a.card_id = b.id
+      left join category c on b.category_id = c.id
+      left join sidebar d on b.sidebar_id = d.id
+    ORDER BY count DESC limit 5
+  </select>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tao.card_nav.mapper.FavoritesDoMapper">
+  <resultMap id="BaseResultMap" type="com.tao.card_nav.entity.FavoritesDo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="card_id" jdbcType="BIGINT" property="cardId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="favicon" jdbcType="VARCHAR" property="favicon" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Base_Column_List">id, card_id, title, url, description, category, favicon, created_at</sql>
+
+  <insert id="insert" parameterType="com.tao.card_nav.entity.FavoritesDo">
+    insert into favorites (id, card_id, title, url, description, category, favicon, created_at)
+    values (#{id,jdbcType=BIGINT}, #{cardId,jdbcType=BIGINT}, #{title,jdbcType=VARCHAR},
+      #{url,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{category,jdbcType=VARCHAR},
+      #{favicon,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+
+  <delete id="deleteByCardId" parameterType="java.lang.Long">
+    delete from favorites where card_id = #{cardId,jdbcType=BIGINT}
+  </delete>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from favorites
+    order by created_at DESC
+  </select>
+
+  <select id="selectByCardId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from favorites
+    where card_id = #{cardId,jdbcType=BIGINT}
+  </select>
+</mapper>

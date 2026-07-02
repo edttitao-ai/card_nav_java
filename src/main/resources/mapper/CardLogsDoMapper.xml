@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tao.card_nav.mapper.CardLogsDoMapper">
+  <resultMap id="BaseResultMap" type="com.tao.card_nav.entity.CardLogsDo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="card_id" jdbcType="BIGINT" property="cardId" />
+    <result column="action" jdbcType="VARCHAR" property="action" />
+    <result column="operator_ip" jdbcType="VARCHAR" property="operatorIp" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+  <sql id="Base_Column_List">id, card_id, action, operator_ip, created_at</sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from card_logs
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <select id="selectByCardId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from card_logs
+    where card_id = #{cardId,jdbcType=BIGINT}
+    order by created_at DESC
+  </select>
+  <select id="selectByCardIdWithTitle" parameterType="java.lang.Long" resultType="com.tao.card_nav.domain.CardLogWithCard">
+    SELECT
+      cl.id as id,
+      cl.card_id as cardId,
+      cr.title as cardTitle,
+      cl.action as action,
+      cl.operator_ip as operatorIp,
+      cl.created_at as createdAt
+    FROM card_logs cl
+    LEFT JOIN cards cr ON cl.card_id = cr.id AND cr.deleted_at IS NULL
+    WHERE cl.card_id = #{cardId,jdbcType=BIGINT}
+    ORDER BY cl.created_at DESC
+  </select>
+  <select id="selectAll" resultType="com.tao.card_nav.domain.CardLogWithCard">
+    SELECT
+      cl.id as id,
+      cl.card_id as cardId,
+      cr.title as cardTitle,
+      cl.action as action,
+      cl.operator_ip as operatorIp,
+      cl.created_at as createdAt,
+      s.label as sidebarLabel,
+      c.name as category
+    FROM card_logs cl
+    LEFT JOIN cards cr ON cl.card_id = cr.id AND cr.deleted_at IS NULL
+    LEFT JOIN sidebar s ON cr.sidebar_id = s.id
+    LEFT JOIN category c ON cr.category_id = c.id
+    ORDER BY cl.created_at DESC
+    LIMIT 200
+  </select>
+  <insert id="insert" parameterType="com.tao.card_nav.entity.CardLogsDo">
+    insert into card_logs (id, card_id, action, operator_ip, created_at)
+    values (#{id,jdbcType=BIGINT}, #{cardId,jdbcType=BIGINT}, #{action,jdbcType=VARCHAR}, 
+      #{operatorIp,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.CardLogsDo">
+    insert into card_logs
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="cardId != null">card_id,</if>
+      <if test="action != null">action,</if>
+      <if test="operatorIp != null">operator_ip,</if>
+      <if test="createdAt != null">created_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id,jdbcType=BIGINT},</if>
+      <if test="cardId != null">#{cardId,jdbcType=BIGINT},</if>
+      <if test="action != null">#{action,jdbcType=VARCHAR},</if>
+      <if test="operatorIp != null">#{operatorIp,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.tao.card_nav.entity.CardLogsDo">
+    update card_logs
+    <set>
+      <if test="cardId != null">card_id = #{cardId,jdbcType=BIGINT},</if>
+      <if test="action != null">action = #{action,jdbcType=VARCHAR},</if>
+      <if test="operatorIp != null">operator_ip = #{operatorIp,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">created_at = #{createdAt,jdbcType=TIMESTAMP},</if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.tao.card_nav.entity.CardLogsDo">
+    update card_logs
+    set card_id = #{cardId,jdbcType=BIGINT},
+      action = #{action,jdbcType=VARCHAR},
+      operator_ip = #{operatorIp,jdbcType=VARCHAR},
+      created_at = #{createdAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>
