@@ -35,15 +35,9 @@ public class VisitorsController {
 
         try {
             String ip = getClientIp(request);
-            String browser = request.getHeader("User-Agent");
-            String[] browsers = {"Chrome", "Firefox", "Safari", "Edge", "Opera", "Mobile Browser"};
-            if (browser == null) {
-                browser = browsers[(int) (Math.random() * browsers.length)];
-            } else {
-                browser = parseBrowser(browser);
-            }
-            String[] devices = {"PC端", "手机端"};
-            String device = devices[(int) (Math.random() * devices.length)];
+            String userAgent = request.getHeader("User-Agent");
+            String browser = parseBrowser(userAgent);
+            String device = parseDevice(userAgent);
 
             VisitorsDo visitor = VisitorsDo.builder()
                     .ip(ip)
@@ -72,6 +66,9 @@ public class VisitorsController {
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
         }
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
@@ -80,7 +77,24 @@ public class VisitorsController {
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
+        // X-Forwarded-For 可能包含多个 IP，取第一个（真实客户端 IP）
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
         return ip;
+    }
+
+    private String parseDevice(String userAgent) {
+        if (userAgent == null) {
+            return "PC端";
+        }
+        String ua = userAgent.toLowerCase();
+        // 移动设备检测
+        if (ua.contains("mobile") || ua.contains("android") || ua.contains("iphone") ||
+            ua.contains("ipad") || ua.contains("tablet") || ua.contains("ipod")) {
+            return "手机端";
+        }
+        return "PC端";
     }
 
     private String parseBrowser(String userAgent) {
