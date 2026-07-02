@@ -1,0 +1,157 @@
+# 涛的导航站 - 后端
+
+卡片式导航站点后端，基于 Spring Boot 4 + MyBatis + MySQL 构建，提供 RESTful API 供前端调用。
+
+## 技术栈
+
+- **框架** - Spring Boot 4.0.0
+- **ORM** - MyBatis 4.0.1
+- **数据库** - MySQL 8
+- **日志切面** - Spring AOP
+- **构建工具** - Maven
+
+## 功能特点
+
+- **栏目管理** - 增删改查导航栏目
+- **卡片管理** - 增删改查链接卡片
+- **收藏夹** - 收藏/取消收藏链接
+- **点击统计** - 记录卡片点击次数，支持排行
+- **访客日志** - 记录每个访问者的访问时间
+- **数据统计** - 访问量、栏目数量、分类统计等
+- **统一响应** - 所有接口返回统一 JSON 格式
+
+## 目录结构
+
+```
+card-nav-java/
+├── card_nav/
+│   ├── src/main/java/com/tao/card_nav/
+│   │   ├── CardNavApplication.java    # 启动类
+│   │   ├── aspect/                    # 切面
+│   │   │   ├── CardLogAspect.java     # 卡片操作日志切面
+│   │   │   └── VisitorInterceptor.java # 访客拦截器
+│   │   ├── config/                    # 配置类
+│   │   │   ├── CorsConfig.java        # 跨域配置
+│   │   │   └── WebMvcConfig.java      # Web MVC 配置
+│   │   ├── controller/                # 控制器
+│   │   │   ├── CardsController.java   # 卡片接口
+│   │   │   ├── CategoryController.java
+│   │   │   ├── ClicksController.java
+│   │   │   ├── FavoritesController.java
+│   │   │   ├── SidebarController.java
+│   │   │   ├── StatsController.java
+│   │   │   └── VisitorsController.java
+│   │   ├── domain/                    # 视图对象
+│   │   ├── entity/                    # 实体类
+│   │   ├── exception/                 # 异常处理
+│   │   ├── mapper/                    # MyBatis Mapper 接口
+│   │   ├── result/                    # 统一响应封装
+│   │   └── service/                   # 业务逻辑
+│   ├── src/main/resources/
+│   │   ├── application.yml            # 主配置文件
+│   │   ├── mapper/                    # MyBatis XML 映射文件
+│   │   └── generatorConfig.xml        # MyBatis Generator 配置
+│   ├── sql/                           # 数据库脚本
+│   │   ├── card_nav.sql               # 建表语句
+│   │   └── init_data.sql              # 初始化数据
+│   ├── env.example                    # 环境变量模板
+│   └── pom.xml
+```
+
+## 环境配置
+
+后端使用环境变量管理敏感配置，参考 `env.example` 创建 `.env` 文件：
+
+```bash
+# 数据库配置（必须）
+DB_HOST=your-mysql-host
+DB_USER=your-mysql-user
+DB_PASSWORD=your-mysql-password
+
+# 数据库配置（可选，有默认值）
+DB_PORT=3306
+DB_NAME=card_nav
+
+# 服务端口（可选，默认 3002）
+SERVER_PORT=3002
+```
+
+> **重要**：`.env` 文件包含敏感信息，已加入 `.gitignore`，请勿上传到 GitHub。
+
+## 数据库初始化
+
+1. 创建数据库：
+```sql
+CREATE DATABASE card_nav DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+2. 执行建表脚本（`sql/card_nav.sql`）
+
+3. 可选：导入初始数据（`sql/init_data.sql`）
+
+## 本地开发
+
+```bash
+cd card_nav
+
+# 使用 Maven 启动
+./mvnw spring-boot:run
+
+# 或打包后运行
+./mvnw clean package
+java -jar target/card_nav-0.0.1-SNAPSHOT.jar
+```
+
+启动后访问 http://localhost:3002
+
+## API 接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/cards/{sidebarId}` | GET | 获取栏目下所有卡片 |
+| `/api/cards` | POST | 新增卡片 |
+| `/api/cards/{id}` | PUT | 更新卡片 |
+| `/api/cards/{id}` | DELETE | 删除卡片 |
+| `/api/cards/{id}/pin` | PUT | 切换置顶状态 |
+| `/api/sidebars` | GET | 获取所有栏目 |
+| `/api/sidebars` | POST | 新增栏目 |
+| `/api/sidebars/{id}` | PUT | 更新栏目 |
+| `/api/sidebars/{id}` | DELETE | 删除栏目 |
+| `/api/favorites` | GET | 获取收藏列表 |
+| `/api/favorites` | POST | 添加收藏 |
+| `/api/favorites/{cardId}` | DELETE | 取消收藏 |
+| `/api/clicks` | GET | 获取点击排行 |
+| `/api/clicks` | POST | 记录点击 |
+| `/api/stats` | GET | 获取统计数据 |
+| `/api/visitors` | GET | 获取访客日志 |
+| `/api/categories` | GET | 获取分类统计 |
+
+## 统一响应格式
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
+```
+
+错误响应：
+```json
+{
+  "code": 400,
+  "message": "错误信息",
+  "data": null
+}
+```
+
+## 常见问题
+
+**Q: 启动报错 `CannotGetJdbcConnectionException`？**
+A: 检查 `.env` 文件是否创建，以及数据库配置是否正确。
+
+**Q: 跨域问题？**
+A: 后端已配置 CORS，允许前端开发服务器访问。如需修改，编辑 `CorsConfig.java`。
+
+**Q: 如何查看日志？**
+A: 启动后控制台会输出日志，也可在 `application.yml` 中配置日志输出到文件。
