@@ -41,7 +41,7 @@
     order by pinned DESC, updated_at DESC
   </select>
   <select id="selectCategoryStats" resultType="com.tao.card_nav.domain.CategoryStats">
-    SELECT 
+    SELECT
       c.name as name,
       COUNT(cr.id) as cardCount,
       COALESCE(SUM(cl.count), 0) as clickCount
@@ -50,6 +50,19 @@
     LEFT JOIN clicks cl ON cr.id = cl.card_id
     GROUP BY c.id, c.name, c.sort_order
     ORDER BY c.sort_order ASC
+  </select>
+  <select id="selectSidebarStats" resultType="com.tao.card_nav.domain.SidebarStats">
+    SELECT
+      s.label as name,
+      s.id as sidebarId,
+      COUNT(cr.id) as cardCount,
+      COALESCE(SUM(cl.count), 0) as clickCount
+    FROM sidebar s
+    LEFT JOIN cards cr ON s.id = cr.sidebar_id AND cr.deleted_at IS NULL
+    LEFT JOIN clicks cl ON cr.id = cl.card_id
+    WHERE s.id != 'dashboard'
+    GROUP BY s.id, s.label, s.sort_order
+    ORDER BY s.sort_order ASC
   </select>
   <insert id="insert" parameterType="com.tao.card_nav.entity.CardsDo">
     insert into cards (id, external_id, title, url, description, category_id, 
