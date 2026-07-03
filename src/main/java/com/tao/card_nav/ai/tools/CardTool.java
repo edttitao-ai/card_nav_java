@@ -5,17 +5,17 @@ import com.tao.card_nav.entity.CardsDo;
 import com.tao.card_nav.service.CardsService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
-import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component
 @RequiredArgsConstructor
 public class CardTool {
 
-    @Resource
     private final CardsService cardsService;
 
     /**
