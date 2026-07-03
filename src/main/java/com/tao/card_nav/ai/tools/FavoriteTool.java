@@ -1,0 +1,61 @@
+package com.tao.card_nav.ai.tools;
+
+import cn.hutool.json.JSONUtil;
+import com.tao.card_nav.entity.FavoritesDo;
+import com.tao.card_nav.service.FavoritesService;
+import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.Tool;
+import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RequiredArgsConstructor
+public class FavoriteTool {
+
+    @Resource
+    private final FavoritesService favoritesService;
+
+    /**
+     * 查询所有收藏
+     * 返回格式: [{"id": 1, "cardId": 1, "title": "卡片标题", "url": "https://...", ...}, ...]
+     */
+    @Tool(name = "查询收藏列表", value = "查询用户的所有收藏列表，返回收藏卡片的信息包括卡片ID、标题、URL、描述等")
+    public String getAllFavorites() {
+        List<FavoritesDo> favorites = favoritesService.getAll();
+        return JSONUtil.toJsonStr(favorites);
+    }
+
+    /**
+     * 添加收藏
+     * 返回格式: {"success": true, "favorite": {"id": 1, "cardId": 1, ...}}
+     */
+    @Tool(name = "添加收藏", value = "将指定卡片添加到收藏列表，需要提供卡片ID")
+    public String addFavorite(@P("卡片ID") Long cardId) {
+        FavoritesDo favorite = FavoritesDo.builder()
+                .cardId(cardId)
+                .build();
+        favoritesService.addFavorite(favorite);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("favorite", favorite);
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 移除收藏
+     * 返回格式: {"success": true, "message": "已取消收藏"}
+     */
+    @Tool(name = "移除收藏", value = "从收藏列表中移除指定卡片，需要提供卡片ID")
+    public String removeFavorite(@P("卡片ID") Long cardId) {
+        favoritesService.removeFavorite(cardId);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "已取消收藏");
+        return JSONUtil.toJsonStr(result);
+    }
+}
