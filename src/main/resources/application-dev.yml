@@ -20,3 +20,26 @@ spring.jackson.time-zone: GMT+8
 spring.servlet.multipart.max-file-size: 10MB
 spring.servlet.multipart.max-request-size: 10MB
 
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.minimaxi.com/v1
+      api-key: ${API_KEY}
+      model-name: MiniMax-M2.7
+      log-requests: true
+      log-responses: true
+      max-token: 200000
+      temperature: 0.5
+    streaming-chat-model:
+      base-url: ${API_URL_3}
+      api-key: ${API_KEY_3}
+      model-name: ${MODEL_NAME_3}
+      log-requests: true
+      log-responses: true
+      max-token: 200000
+      temperature: 0.3
+
+
+
+

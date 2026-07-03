@@ -1,6 +1,7 @@
 package com.tao.card_nav.service;
 
 import com.tao.card_nav.entity.SidebarDo;
+import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.mapper.CardsDoMapper;
 import com.tao.card_nav.mapper.SidebarDoMapper;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,11 @@ public class SidebarService {
      * 新增侧边栏
      */
     public void addSidebar(SidebarDo sidebar) {
+        // 检查 ID 是否已存在
+        SidebarDo existing = sidebarMapper.selectByPrimaryKey(sidebar.getId());
+        if (existing != null) {
+            throw new BusinessException(400, "栏目 ID 已存在，请使用其他 ID");
+        }
         // 获取当前最大 sortOrder
         List<SidebarDo> all = sidebarMapper.selectAllOrderBySortOrder();
         int maxOrder = all.stream()
