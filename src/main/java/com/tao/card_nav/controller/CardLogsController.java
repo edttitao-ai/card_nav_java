@@ -2,6 +2,8 @@ package com.tao.card_nav.controller;
 
 import com.tao.card_nav.domain.CardLogWithCard;
 import com.tao.card_nav.entity.CardLogsDo;
+import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.exception.ThrowUtils;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.CardLogsService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class CardLogsController {
      */
     @GetMapping("/{cardId}")
     public Result<List<CardLogsDo>> getLogsByCardId(@PathVariable Long cardId) {
+        ThrowUtils.throwIf(cardId == null || cardId <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         return Result.success(cardLogsService.getLogsByCardId(cardId));
     }
 }

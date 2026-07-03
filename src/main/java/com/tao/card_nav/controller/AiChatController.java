@@ -3,6 +3,8 @@ package com.tao.card_nav.controller;
 
 import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.ai.aiService.AiServiceAssistant;
+import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.exception.ThrowUtils;
 
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ public class AiChatController {
 
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chat(@RequestBody String userMessage) {
+        ThrowUtils.throwIf(userMessage == null || userMessage.trim().isEmpty(), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
         return aiService.chatNav(userMessage)
                 .map(chunk -> {
                     Map<String, String> wrapper = Map.of("d", chunk);

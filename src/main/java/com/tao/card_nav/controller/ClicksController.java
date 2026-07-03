@@ -2,6 +2,8 @@ package com.tao.card_nav.controller;
 
 import com.tao.card_nav.domain.ClickWithCard;
 import com.tao.card_nav.entity.ClicksDo;
+import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.exception.ThrowUtils;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.ClicksService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,8 @@ public class ClicksController {
      */
     @PostMapping
     public Result<Void> clickCard(@RequestBody ClickRequest request) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR, "请求对象不能为空");
+        ThrowUtils.throwIf(request.getCardId() == null || request.getCardId().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "卡片ID不能为空");
         clicksService.clickCard(request.getCardId());
         return Result.success();
     }
@@ -38,6 +42,7 @@ public class ClicksController {
      */
     @GetMapping("/{cardId}")
     public Result<ClicksDo> getClickByCardId(@PathVariable String cardId) {
+        ThrowUtils.throwIf(cardId == null || cardId.trim().isEmpty(), ErrorCode.PARAMS_ERROR, "卡片ID不能为空");
         return Result.success(clicksService.getClickByCardId(cardId));
     }
 

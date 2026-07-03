@@ -1,6 +1,8 @@
 package com.tao.card_nav.controller;
 
 import com.tao.card_nav.entity.CardsDo;
+import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.exception.ThrowUtils;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.CardsService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class CardsController {
      */
     @GetMapping("/{id}")
     public Result<CardsDo> getCardById(@PathVariable Long id) {
+        ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         return Result.success(cardsService.getCardById(id));
     }
 
@@ -36,6 +39,8 @@ public class CardsController {
      */
     @PostMapping
     public Result<CardsDo> addCard(@RequestBody CardsDo card) {
+        ThrowUtils.throwIf(card == null, ErrorCode.PARAMS_ERROR, "卡片对象不能为空");
+        ThrowUtils.throwIf(card.getTitle() == null || card.getTitle().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "卡片标题不能为空");
         return Result.success(cardsService.addCard(card));
     }
 
@@ -44,6 +49,8 @@ public class CardsController {
      */
     @PutMapping("/{id}")
     public Result<CardsDo> updateCard(@PathVariable Long id, @RequestBody CardsDo card) {
+        ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
+        ThrowUtils.throwIf(card == null, ErrorCode.PARAMS_ERROR, "卡片对象不能为空");
         return Result.success(cardsService.updateCard(id, card));
     }
 
@@ -52,6 +59,7 @@ public class CardsController {
      */
     @DeleteMapping("/{id}")
     public Result<Void> deleteCard(@PathVariable Long id) {
+        ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         cardsService.deleteCard(id);
         return Result.success();
     }
@@ -61,6 +69,8 @@ public class CardsController {
      */
     @PutMapping("/{id}/pinned")
     public Result<CardsDo> togglePinned(@PathVariable Long id, @RequestParam Boolean pinned) {
+        ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
+        ThrowUtils.throwIf(pinned == null, ErrorCode.PARAMS_ERROR, "置顶状态不能为空");
         return Result.success(cardsService.togglePinned(id, pinned));
     }
 }

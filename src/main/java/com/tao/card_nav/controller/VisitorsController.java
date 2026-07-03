@@ -1,9 +1,8 @@
 package com.tao.card_nav.controller;
 
-import com.tao.card_nav.aspect.VisitorInterceptor;
 import com.tao.card_nav.entity.VisitorsDo;
 import com.tao.card_nav.result.Result;
-import com.tao.card_nav.mapper.VisitorsDoMapper;
+
 import com.tao.card_nav.service.VisitorsService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
