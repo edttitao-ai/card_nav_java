@@ -1,5 +1,6 @@
 package com.tao.card_nav.result;
 
+import com.tao.card_nav.dict.ResultCodeEnum;
 import lombok.Data;
 
 @Data
@@ -10,7 +11,7 @@ public class Result<T> {
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.setCode(200);
+        result.setCode(ResultCodeEnum.SUCCESS.getCode());
         result.setMessage("success");
         result.setData(data);
         return result;
@@ -28,6 +29,6 @@ public class Result<T> {
     }
 
     public static <T> Result<T> error(String message) {
-        return error(500, message);
+        return error(ResultCodeEnum.INTERNAL_ERROR.getCode(), message);
     }
 }
