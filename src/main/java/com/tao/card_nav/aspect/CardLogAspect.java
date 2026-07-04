@@ -65,8 +65,9 @@ public class CardLogAspect {
             try {
                 cardLogsService.logAction(cardId, action, operatorIp);
             } catch (Exception e) {
-                // 日志记录失败不影响主业务
-                e.printStackTrace();
+                // 日志记录失败不影响主业务，但要用 logger 记录，别只 printStackTrace
+                org.slf4j.LoggerFactory.getLogger(CardLogAspect.class)
+                        .error("记录卡片操作日志失败: cardId={}, action={}", cardId, action, e);
             }
         }
         

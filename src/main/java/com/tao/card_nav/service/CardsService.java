@@ -88,7 +88,26 @@ public class CardsService {
         if (existing == null) {
             throw new BusinessException("卡片不存在");
         }
+
+        // 如果改了 URL，校验新 URL 不能与别的卡片冲突
+        if (card.getUrl() != null && !card.getUrl().isEmpty() && !card.getUrl().equals(existing.getUrl())) {
+            CardsDo conflictByUrl = cardsMapper.selectByUrl(card.getUrl());
+            if (conflictByUrl != null && !conflictByUrl.getId().equals(id)) {
+                throw new BusinessException(400, "新链接已被其他卡片「" + conflictByUrl.getTitle()
+                        + "」(id=" + conflictByUrl.getId() + ")占用");
+            }
+        }
+        // 如果改了 title，校验新 title 不能与别的卡片冲突
+        if (card.getTitle() != null && !card.getTitle().isEmpty() && !card.getTitle().equals(existing.getTitle())) {
+            CardsDo conflictByTitle = cardsMapper.selectByTitle(card.getTitle());
+            if (conflictByTitle != null && !conflictByTitle.getId().equals(id)) {
+                throw new BusinessException(400, "新标题已被其他卡片(id=" + conflictByTitle.getId() + ")占用，请更换");
+            }
+        }
+
         card.setId(id);
+        // 保留原 createdAt，不允许通过更新接口改创建时间
+        card.setCreatedAt(existing.getCreatedAt());
         card.setUpdatedAt(new Date());
         // 不允许通过更新接口删除卡片
         card.setDeletedAt(null);

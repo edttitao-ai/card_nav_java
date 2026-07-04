@@ -154,6 +154,80 @@ public class CardTool {
     }
 
     /**
+     * 编辑卡片
+     * 返回格式: {"success": true, "card": {...}}
+     *
+     * 所有非必填字段都为「传了才更新」语义；不传则保留原值。
+     * 必传的是 cardId。
+     * 如果改了分类/侧边栏相关的字段，传值方式和新增卡片一样：
+     *   - 直接传 ID（categoryId / sidebarId）
+     *   - 或者传名称（categoryName / sidebarLabel），后端自动匹配
+     */
+    @Tool(name = "编辑卡片", value = "修改已存在的卡片信息。必填：cardId。可选字段（不传则保留原值）：title、url、description、favicon、categoryId/sidebarId（或者对应的 categoryName/sidebarLabel）。修改链接或标题时会校验全表唯一冲突。返回更新后的卡片信息")
+    public String updateCard(
+            @P("卡片ID（必填）") Long cardId,
+            @P(value = "新标题（可选，不传不改）", required = false) String title,
+            @P(value = "新链接 URL（可选，不传不改）", required = false) String url,
+            @P(value = "新描述（可选，不传不改）", required = false) String description,
+            @P(value = "新 favicon URL（可选，不传不改）", required = false) String favicon,
+            @P(value = "新分类ID（可选，与新 categoryName 二选一；都不传则不改分类）", required = false) Long categoryId,
+            @P(value = "新侧边栏ID（可选，与新 sidebarLabel 二选一；都不传则不改侧边栏）", required = false) String sidebarId,
+            @P(value = "新分类名称（可选，后端自动匹配ID）", required = false) String categoryName,
+            @P(value = "新侧边栏名称（可选，后端自动匹配ID）", required = false) String sidebarLabel) {
+
+        // 名称 → ID 自动匹配
+        if (categoryId == null && categoryName != null && !categoryName.isEmpty()) {
+            categoryId = matchCategoryIdByName(categoryName);
+        }
+        if ((sidebarId == null || sidebarId.isEmpty()) && sidebarLabel != null && !sidebarLabel.isEmpty()) {
+            sidebarId = matchSidebarIdByLabel(sidebarLabel);
+        }
+
+        CardsDo update = new CardsDo();
+        if (title != null && !title.isEmpty()) update.setTitle(title);
+        if (url != null && !url.isEmpty()) update.setUrl(url);
+        if (description != null && !description.isEmpty()) update.setDescription(description);
+        if (favicon != null && !favicon.isEmpty()) update.setFavicon(favicon);
+        if (categoryId != null) update.setCategoryId(categoryId);
+        if (sidebarId != null && !sidebarId.isEmpty()) update.setSidebarId(sidebarId);
+
+        // 全为空就相当于没改，直接返回原卡片
+        if (update.getTitle() == null && update.getUrl() == null && update.getDescription() == null
+                && update.getFavicon() == null && update.getCategoryId() == null
+                && update.getSidebarId() == null) {
+            CardsDo current = cardsService.getCardById(cardId);
+            Map<String, Object> noop = new HashMap<>();
+            noop.put("success", true);
+            noop.put("card", current);
+            noop.put("message", "未提供任何修改字段");
+            return JSONUtil.toJsonStr(noop);
+        }
+
+        CardsDo saved = cardsService.updateCard(cardId, update);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("card", saved);
+        result.put("resolvedCategoryId", categoryId);
+        result.put("resolvedSidebarId", sidebarId);
+
+        // 调试信息：让 AI 知道实际更新了哪些字段（如果传了 categoryName 但没匹配到，会是 null）
+        Map<String, Object> resolvedFields = new HashMap<>();
+        if (categoryName != null) {
+            resolvedFields.put("requestedCategoryName", categoryName);
+            resolvedFields.put("matchedCategoryId", categoryId);
+        }
+        if (sidebarLabel != null) {
+            resolvedFields.put("requestedSidebarLabel", sidebarLabel);
+            resolvedFields.put("matchedSidebarId", sidebarId);
+        }
+        if (!resolvedFields.isEmpty()) {
+            result.put("debug", resolvedFields);
+        }
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
      * 切换卡片置顶状态
      * 返回格式: {"success": true, "card": {"id": 1, "title": "卡片标题", "pinned": true}}
      */

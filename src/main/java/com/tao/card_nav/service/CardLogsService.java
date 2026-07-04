@@ -6,6 +6,7 @@ import com.tao.card_nav.mapper.CardLogsDoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -43,6 +44,7 @@ public class CardLogsService {
                 .cardId(cardId)
                 .action(action)
                 .operatorIp(operatorIp)
+                .createdAt(new Date())
                 .build();
         cardLogsMapper.insertSelective(log);
     }

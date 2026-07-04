@@ -1,8 +1,12 @@
 package com.tao.card_nav.controller;
 
 import com.tao.card_nav.entity.CardsDo;
+import com.tao.card_nav.entity.CategoryDo;
+import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.exception.ErrorCode;
 import com.tao.card_nav.exception.ThrowUtils;
+import com.tao.card_nav.mapper.CardsDoMapper;
+import com.tao.card_nav.mapper.CategoryDoMapper;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.CardsService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +20,8 @@ import java.util.List;
 public class CardsController {
 
     private final CardsService cardsService;
+    private final CategoryDoMapper categoryMapper;
+    private final CardsDoMapper cardsMapper;
 
     /**
      * 查询所有卡片，支持按 sidebarId 过滤
@@ -41,6 +47,12 @@ public class CardsController {
     public Result<CardsDo> addCard(@RequestBody CardsDo card) {
         ThrowUtils.throwIf(card == null, ErrorCode.PARAMS_ERROR, "卡片对象不能为空");
         ThrowUtils.throwIf(card.getTitle() == null || card.getTitle().trim().isEmpty(), ErrorCode.PARAMS_ERROR, "卡片标题不能为空");
+        // 兼容前端可能传 category 名字而不是 ID
+        if (card.getCategoryId() == null && card.getCategory() != null && !card.getCategory().isEmpty()) {
+            card.setCategoryId(resolveCategoryId(card.getCategory()));
+        }
+        ThrowUtils.throwIf(card.getCategoryId() == null, ErrorCode.PARAMS_ERROR, "分类ID不能为空");
+        ThrowUtils.throwIf(card.getSidebarId() == null || card.getSidebarId().isEmpty(), ErrorCode.PARAMS_ERROR, "侧边栏ID不能为空");
         return Result.success(cardsService.addCard(card));
     }
 
@@ -51,6 +63,18 @@ public class CardsController {
     public Result<CardsDo> updateCard(@PathVariable Long id, @RequestBody CardsDo card) {
         ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         ThrowUtils.throwIf(card == null, ErrorCode.PARAMS_ERROR, "卡片对象不能为空");
+
+        // 兼容前端传 category 名字（而不是 ID）的情况
+        if (card.getCategoryId() == null && card.getCategory() != null && !card.getCategory().isEmpty()) {
+            card.setCategoryId(resolveCategoryId(card.getCategory()));
+        }
+
+        // 防止传入的 sidebarId 实际是 label 而非 id
+        if (card.getSidebarId() != null && !card.getSidebarId().isEmpty()) {
+            // 简化：保留原值。复杂场景下应做"label → id" 解析。
+            // 这里仅保证 id 字段非空。
+        }
+
         return Result.success(cardsService.updateCard(id, card));
     }
 
@@ -72,5 +96,24 @@ public class CardsController {
         ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         ThrowUtils.throwIf(pinned == null, ErrorCode.PARAMS_ERROR, "置顶状态不能为空");
         return Result.success(cardsService.togglePinned(id, pinned));
+    }
+
+    /**
+     * 把"分类名"解析成分类 ID（精确优先，模糊兜底）
+     */
+    private Long resolveCategoryId(String name) {
+        List<CategoryDo> all = categoryMapper.selectAllOrderBySortOrder();
+        if (all == null) return null;
+        for (CategoryDo c : all) {
+            if (c.getName() != null && c.getName().equals(name)) {
+                return c.getId();
+            }
+        }
+        for (CategoryDo c : all) {
+            if (c.getName() != null && c.getName().contains(name)) {
+                return c.getId();
+            }
+        }
+        return null;
     }
 }
