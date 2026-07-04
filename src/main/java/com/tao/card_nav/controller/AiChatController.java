@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -23,9 +24,15 @@ public class AiChatController {
     private AiServiceAssistant aiService;
 
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chat(@RequestBody String userMessage) {
+    public Flux<ServerSentEvent<String>> chat(@RequestBody Map<String, String> payload) {
+        String userMessage = payload.get("userMessage");
+        String sessionId = payload.get("sessionId");
         ThrowUtils.throwIf(userMessage == null || userMessage.trim().isEmpty(), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
-        return aiService.chatNav(userMessage)
+        // 若前端没传 sessionId，后端自动生成一个，避免 memory 维度混乱
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            sessionId = "anon-" + UUID.randomUUID().toString();
+        }
+        return aiService.chatNav(sessionId, userMessage)
                 .map(chunk -> {
                     Map<String, String> wrapper = Map.of("d", chunk);
                     String jsonData = JSONUtil.toJsonStr(wrapper);
@@ -34,7 +41,7 @@ public class AiChatController {
                             .build();
                 })
                 .concatWith(Mono.just(
-                        // 发送结束事件
+                        // 发送结束事件（data 为空字符串，前端按 [DONE] 兼容）
                         ServerSentEvent.<String>builder()
                                 .event("done")
                                 .data("")

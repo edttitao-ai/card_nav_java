@@ -3,9 +3,11 @@ package com.tao.card_nav.ai.aiService;
 import com.tao.card_nav.ai.tools.CardTool;
 import com.tao.card_nav.ai.tools.CategoryTool;
 import com.tao.card_nav.ai.tools.FavoriteTool;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.service.AiServices;
+
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -30,11 +32,14 @@ public class AiServiceFactory {
 
     private final CategoryTool categoryTool;
 
+    private final ChatMemoryProvider chatMemoryProvider;
+
     public AiServiceAssistant createAiServiceAssistant() {
         return AiServices.builder(AiServiceAssistant.class)
                 .chatModel(chatModel)
                 .streamingChatModel(streamingChatModel)
                 .tools(cardTool, favoriteTool, categoryTool)
+                .chatMemoryProvider(chatMemoryProvider)
                 .build();
 
     }

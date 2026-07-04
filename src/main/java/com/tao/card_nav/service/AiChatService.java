@@ -9,11 +9,11 @@ import reactor.core.publisher.Flux;
 @Service
 public class AiChatService {
 
-    @Resource
-    private AiServiceFactory aiServiceFactory;
+//    @Resource
+//    private AiServiceFactory aiServiceFactory;
 
-    public Flux<String> aiChat(String userMessage){
-        AiServiceAssistant aiServiceAssistant = aiServiceFactory.createAiServiceAssistant();
-        return aiServiceAssistant.chatNav(userMessage);
-    }
+//    public Flux<String> aiChat(String userMessage){
+//        AiServiceAssistant aiServiceAssistant = aiServiceFactory.createAiServiceAssistant();
+//        return aiServiceAssistant.chatNav(userMessage);
+//    }
 }
