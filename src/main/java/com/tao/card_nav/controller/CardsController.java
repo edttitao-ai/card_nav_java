@@ -2,10 +2,8 @@ package com.tao.card_nav.controller;
 
 import com.tao.card_nav.entity.CardsDo;
 import com.tao.card_nav.entity.CategoryDo;
-import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.exception.ErrorCode;
 import com.tao.card_nav.exception.ThrowUtils;
-import com.tao.card_nav.mapper.CardsDoMapper;
 import com.tao.card_nav.mapper.CategoryDoMapper;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.CardsService;
@@ -21,7 +19,6 @@ public class CardsController {
 
     private final CardsService cardsService;
     private final CategoryDoMapper categoryMapper;
-    private final CardsDoMapper cardsMapper;
 
     /**
      * 查询所有卡片，支持按 sidebarId 过滤
