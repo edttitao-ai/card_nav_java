@@ -28,6 +28,30 @@ public class CardsService {
     }
 
     /**
+     * AI 场景用：按侧边栏查询，硬上限 limit 条（pinned 优先 + id 倒序）
+     */
+    public List<CardsDo> getCardsLimited(String sidebarId, Integer limit) {
+        if (limit == null || limit <= 0) {
+            limit = 20;
+        }
+        if (sidebarId != null && !sidebarId.isEmpty()) {
+            return cardsMapper.selectBySidebarIdLimited(sidebarId, limit);
+        }
+        return cardsMapper.selectAllLimited(limit);
+    }
+
+    /**
+     * AI 场景用：按 keyword + sidebarId + categoryId 检索，硬上限 limit 条
+     * keyword 匹配 title/description/url；其他条件为空则不参与过滤
+     */
+    public List<CardsDo> searchCards(String keyword, String sidebarId, Long categoryId, Integer limit) {
+        if (limit == null || limit <= 0) {
+            limit = 20;
+        }
+        return cardsMapper.searchCards(keyword, sidebarId, categoryId, limit);
+    }
+
+    /**
      * 按 ID 查询卡片
      */
     public CardsDo getCardById(Long id) {

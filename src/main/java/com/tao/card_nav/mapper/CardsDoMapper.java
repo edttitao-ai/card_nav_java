@@ -33,6 +33,24 @@ public interface CardsDoMapper {
 
     List<CardsDo> selectAll();
 
+    /**
+     * AI 场景用：按侧边栏查询，硬上限 limit 条，pinned 优先 + id 倒序
+     */
+    List<CardsDo> selectBySidebarIdLimited(@Param("sidebarId") String sidebarId, @Param("limit") Integer limit);
+
+    /**
+     * AI 场景用：全量查询，硬上限 limit 条，pinned 优先 + id 倒序
+     */
+    List<CardsDo> selectAllLimited(@Param("limit") Integer limit);
+
+    /**
+     * AI 场景用：按关键词 + 侧边栏 + 分类检索（title/description/url 模糊匹配），pinned 优先 + id 倒序，硬上限 limit
+     */
+    List<CardsDo> searchCards(@Param("keyword") String keyword,
+                              @Param("sidebarId") String sidebarId,
+                              @Param("categoryId") Long categoryId,
+                              @Param("limit") Integer limit);
+
     List<CategoryStats> selectCategoryStats();
 
     List<SidebarStats> selectSidebarStats();

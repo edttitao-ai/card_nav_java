@@ -36,13 +36,81 @@ public class CardTool {
     }
 
     /**
-     * 查询卡片列表
-     * 返回格式: [{"id": 1, "title": "卡片标题", "url": "https://...", ...}, ...]
+     * 查询卡片列表（AI 场景，硬上限 20 条，字段已裁剪）
+     * 返回格式: {"items": [{id, title, url, category, pinned, sidebarId}, ...], "tip": "..."}
+     * 当结果可能不完整时，tip 字段会提示使用「搜索卡片」工具按关键词召回更精准的结果
      */
-    @Tool(name = "查询卡片列表", value = "查询所有卡片列表，或按侧边栏ID过滤。返回卡片数组，每个卡片包含id、title、url、description、category、pinned等字段")
+    @Tool(name = "查询卡片列表", value = "查询所有卡片或按侧边栏ID过滤。一次最多返回 20 条卡片摘要（不含 description），按置顶优先排序。如果用户描述模糊（如「我收藏的 AI 工具」），应优先用「搜索卡片」工具按关键词召回。本工具仅在用户明确要全量/列表时使用")
     public String getCards(@P(value = "侧边栏ID，可为空", required = false) String sidebarId) {
-        List<CardsDo> cards = cardsService.getCards(sidebarId);
-        return JSONUtil.toJsonStr(cards);
+        final int LIMIT = 20;
+        List<CardsDo> cards = cardsService.getCardsLimited(sidebarId, LIMIT);
+        List<Map<String, Object>> items = cards.stream().map(this::toAiListItem).toList();
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", items);
+        result.put("count", items.size());
+        result.put("limit", LIMIT);
+        result.put("truncated", items.size() >= LIMIT);
+        result.put("tip", "结果最多 20 条，可能不完整。如需精准召回请使用「搜索卡片」工具传 keyword 参数");
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 搜索卡片（AI 场景，按关键词 + 侧边栏 + 分类检索）
+     * 返回格式: {"items": [{id, title, category, sidebarLabel, snippet, pinned}], "count": N, "limit": 20}
+     * keyword 匹配 title/description/url；其他过滤条件为空则不参与过滤
+     */
+    @Tool(name = "搜索卡片", value = "按关键词检索卡片，同时可按侧边栏ID/分类ID过滤。keyword 会模糊匹配卡片的标题、描述、URL。一次最多返回 20 条摘要，包含 id/title/category/sidebarLabel/snippet(描述前80字)/pinned。这是用户表达模糊需求时（如「找 AI 写代码的工具」「我那个 GitHub 链接」）的默认首选工具")
+    public String searchCards(
+            @P(value = "搜索关键词（可选），匹配标题/描述/URL", required = false) String keyword,
+            @P(value = "侧边栏ID（可选），与 keyword 叠加过滤", required = false) String sidebarId,
+            @P(value = "分类ID（可选），与 keyword 叠加过滤", required = false) Long categoryId) {
+        final int LIMIT = 20;
+        String kw = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
+        List<CardsDo> cards = cardsService.searchCards(kw, sidebarId, categoryId, LIMIT);
+
+        // 顺便把侧边栏 label 拿到，做 sidebarLabel 字段
+        java.util.Map<String, String> sidebarLabelMap = new java.util.HashMap<>();
+        try {
+            for (SidebarDo s : sidebarService.getAllSidebars()) {
+                sidebarLabelMap.put(s.getId(), s.getLabel());
+            }
+        } catch (Exception ignore) {
+        }
+
+        List<Map<String, Object>> items = new java.util.ArrayList<>();
+        for (CardsDo c : cards) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", c.getId());
+            item.put("title", c.getTitle());
+            item.put("category", c.getCategory());
+            item.put("sidebarId", c.getSidebarId());
+            item.put("sidebarLabel", sidebarLabelMap.getOrDefault(c.getSidebarId(), c.getSidebarId()));
+            item.put("pinned", c.getPinned());
+            String desc = c.getDescription();
+            item.put("snippet", desc == null || desc.isEmpty() ? "" :
+                    (desc.length() > 80 ? desc.substring(0, 80) + "..." : desc));
+            items.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", items);
+        result.put("count", items.size());
+        result.put("limit", LIMIT);
+        result.put("truncated", items.size() >= LIMIT);
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 把卡片压缩为列表项（不含 description，节省 token）
+     */
+    private Map<String, Object> toAiListItem(CardsDo c) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", c.getId());
+        item.put("title", c.getTitle());
+        item.put("url", c.getUrl());
+        item.put("category", c.getCategory());
+        item.put("sidebarId", c.getSidebarId());
+        item.put("pinned", c.getPinned());
+        return item;
     }
 
     /**

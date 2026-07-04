@@ -54,6 +54,49 @@
     where cards.deleted_at IS NULL
     order by pinned DESC, updated_at DESC
   </select>
+  <!-- AI 场景用：按侧边栏查询，硬上限 limit 条，pinned 优先 + id 倒序 -->
+  <select id="selectBySidebarIdLimited" resultMap="BaseResultMap">
+    select cards.*, c.name as category_name
+    from cards
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.sidebar_id = #{sidebarId,jdbcType=VARCHAR}
+      AND cards.deleted_at IS NULL
+    order by pinned DESC, id DESC
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+  <!-- AI 场景用：全量查询，硬上限 limit 条，pinned 优先 + id 倒序 -->
+  <select id="selectAllLimited" resultMap="BaseResultMap">
+    select cards.*, c.name as category_name
+    from cards
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.deleted_at IS NULL
+    order by pinned DESC, id DESC
+    limit #{limit,jdbcType=INTEGER}
+  </select>
+  <!-- AI 场景用：按 keyword + sidebarId + categoryId 检索，匹配 title/description/url，pinned 优先 + id 倒序，硬上限 limit -->
+  <select id="searchCards" resultMap="BaseResultMap">
+    select cards.*, c.name as category_name
+    from cards
+    LEFT JOIN category c ON cards.category_id = c.id
+    <where>
+      cards.deleted_at IS NULL
+      <if test="sidebarId != null and sidebarId != ''">
+        AND cards.sidebar_id = #{sidebarId,jdbcType=VARCHAR}
+      </if>
+      <if test="categoryId != null">
+        AND cards.category_id = #{categoryId,jdbcType=BIGINT}
+      </if>
+      <if test="keyword != null and keyword != ''">
+        AND (
+          cards.title LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%')
+          OR cards.description LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%')
+          OR cards.url LIKE CONCAT('%', #{keyword,jdbcType=VARCHAR}, '%')
+        )
+      </if>
+    </where>
+    order by pinned DESC, id DESC
+    limit #{limit,jdbcType=INTEGER}
+  </select>
   <select id="selectCategoryStats" resultType="com.tao.card_nav.domain.CategoryStats">
     SELECT
       c.name as name,
