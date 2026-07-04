@@ -6,9 +6,11 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -26,17 +28,18 @@ langchain4j:
       base-url: ${API_URL}
       api-key: ${API_KEY}
       model-name: ${MODEL_NAME}
-      log-requests: true
-      log-responses: true
-      max-token: 200000
+      log-requests: false
+      log-responses: false
+      max-tokens: 200000
       temperature: 0.5
+
     streaming-chat-model:
       base-url: ${API_URL}
       api-key: ${API_KEY}
       model-name: ${MODEL_NAME}
-      log-requests: true
+      log-requests: false
       log-responses: false
-      max-token: 200000
+      max-tokens: 200000     # ← 改成复数
       temperature: 0.3
 
 server:
