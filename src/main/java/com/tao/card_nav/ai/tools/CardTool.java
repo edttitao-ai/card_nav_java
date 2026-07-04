@@ -2,7 +2,11 @@ package com.tao.card_nav.ai.tools;
 
 import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.entity.CardsDo;
+import com.tao.card_nav.entity.CategoryDo;
+import com.tao.card_nav.entity.SidebarDo;
 import com.tao.card_nav.service.CardsService;
+import com.tao.card_nav.service.CategoryService;
+import com.tao.card_nav.service.SidebarService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +21,8 @@ import java.util.Map;
 public class CardTool {
 
     private final CardsService cardsService;
+    private final CategoryService categoryService;
+    private final SidebarService sidebarService;
 
     /**
      * 根据卡片ID查询卡片详情
@@ -42,13 +48,23 @@ public class CardTool {
      * 新增卡片
      * 返回格式: {"success": true, "card": {"id": 1, "title": "卡片标题", ...}}
      */
-    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL，可选提供描述、分类ID、侧边栏ID。返回创建成功的卡片信息")
+    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL。分类和侧边栏参数支持两种方式：1) 直接传ID（categoryId、sidebarId）；2) 传分类名称或侧边栏名称（categoryName、sidebarLabel），后端会自动查找对应ID。如果都为空则不设置。返回创建成功的卡片信息")
     public String addCard(
             @P("卡片标题，不能为空") String title,
             @P("卡片URL，不能为空") String url,
             @P(value = "卡片描述，可为空", required = false) String description,
-            @P(value = "分类ID，可为空", required = false) Long categoryId,
-            @P(value = "侧边栏ID，可为空", required = false) String sidebarId) {
+            @P(value = "分类ID，可为空（与categoryName二选一）", required = false) Long categoryId,
+            @P(value = "侧边栏ID，可为空（与sidebarLabel二选一）", required = false) String sidebarId,
+            @P(value = "分类名称，可为空（与categoryId二选一，后端自动匹配ID）", required = false) String categoryName,
+            @P(value = "侧边栏名称，可为空（与sidebarId二选一，后端自动匹配ID）", required = false) String sidebarLabel) {
+        // 如果传入的是名称而非ID，自动匹配
+        if (categoryId == null && categoryName != null && !categoryName.isEmpty()) {
+            categoryId = matchCategoryIdByName(categoryName);
+        }
+        if ((sidebarId == null || sidebarId.isEmpty()) && sidebarLabel != null && !sidebarLabel.isEmpty()) {
+            sidebarId = matchSidebarIdByLabel(sidebarLabel);
+        }
+
         CardsDo card = CardsDo.builder()
                 .title(title)
                 .url(url)
@@ -57,11 +73,53 @@ public class CardTool {
                 .sidebarId(sidebarId)
                 .build();
         CardsDo savedCard = cardsService.addCard(card);
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("card", savedCard);
+        result.put("resolvedCategoryId", categoryId);
+        result.put("resolvedSidebarId", sidebarId);
         return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 根据分类名称匹配分类ID（精确优先，模糊兜底）
+     */
+    private Long matchCategoryIdByName(String name) {
+        List<CategoryDo> categories = categoryService.getAllCategories();
+        // 精确匹配
+        for (CategoryDo c : categories) {
+            if (c.getName() != null && c.getName().equals(name)) {
+                return c.getId();
+            }
+        }
+        // 包含匹配
+        for (CategoryDo c : categories) {
+            if (c.getName() != null && c.getName().contains(name)) {
+                return c.getId();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据侧边栏名称匹配侧边栏ID（精确优先，模糊兜底）
+     */
+    private String matchSidebarIdByLabel(String label) {
+        List<SidebarDo> sidebars = sidebarService.getAllSidebars();
+        // 精确匹配
+        for (SidebarDo s : sidebars) {
+            if (s.getLabel() != null && s.getLabel().equals(label)) {
+                return s.getId();
+            }
+        }
+        // 包含匹配
+        for (SidebarDo s : sidebars) {
+            if (s.getLabel() != null && s.getLabel().contains(label)) {
+                return s.getId();
+            }
+        }
+        return null;
     }
 
     /**

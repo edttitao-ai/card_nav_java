@@ -1,6 +1,7 @@
 package com.tao.card_nav.ai.aiService;
 
 import com.tao.card_nav.ai.tools.CardTool;
+import com.tao.card_nav.ai.tools.CategoryTool;
 import com.tao.card_nav.ai.tools.FavoriteTool;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -27,11 +28,13 @@ public class AiServiceFactory {
 
     private final FavoriteTool favoriteTool;
 
+    private final CategoryTool categoryTool;
+
     public AiServiceAssistant createAiServiceAssistant() {
         return AiServices.builder(AiServiceAssistant.class)
                 .chatModel(chatModel)
                 .streamingChatModel(streamingChatModel)
-                .tools(cardTool, favoriteTool)
+                .tools(cardTool, favoriteTool, categoryTool)
                 .build();
 
     }
