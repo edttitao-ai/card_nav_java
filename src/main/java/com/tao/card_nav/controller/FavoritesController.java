@@ -1,5 +1,6 @@
 package com.tao.card_nav.controller;
 
+import com.tao.card_nav.domain.FavoriteWithCard;
 import com.tao.card_nav.entity.FavoritesDo;
 import com.tao.card_nav.exception.ErrorCode;
 import com.tao.card_nav.exception.ThrowUtils;
@@ -18,8 +19,8 @@ public class FavoritesController {
     private final FavoritesService favoritesService;
 
     @GetMapping
-    public Result<List<FavoritesDo>> getAll() {
-        return Result.success(favoritesService.getAll());
+    public Result<List<FavoriteWithCard>> getAll() {
+        return Result.success(favoritesService.getAllWithCard());
     }
 
     @PostMapping

@@ -1,6 +1,7 @@
 package com.tao.card_nav.ai.tools;
 
 import cn.hutool.json.JSONUtil;
+import com.tao.card_nav.domain.FavoriteWithCard;
 import com.tao.card_nav.entity.CardsDo;
 import com.tao.card_nav.entity.FavoritesDo;
 import com.tao.card_nav.exception.BusinessException;
@@ -25,11 +26,11 @@ public class FavoriteTool {
 
     /**
      * 查询所有收藏
-     * 返回格式: [{"id": 1, "cardId": 1, "title": "卡片标题", "url": "https://...", ...}, ...]
+     * 返回格式: [{"id": 1, "cardId": 1, "title": "卡片标题", "url": "https://...", "category": "分类", ...}, ...]
      */
-    @Tool(name = "查询收藏列表", value = "查询用户的所有收藏列表，返回收藏卡片的信息包括卡片ID、标题、URL、描述等")
+    @Tool(name = "查询收藏列表", value = "查询用户的所有收藏列表，返回收藏卡片的信息包括卡片ID、标题、URL、描述、分类等")
     public String getAllFavorites() {
-        List<FavoritesDo> favorites = favoritesService.getAll();
+        List<FavoriteWithCard> favorites = favoritesService.getAllWithCard();
         return JSONUtil.toJsonStr(favorites);
     }
 

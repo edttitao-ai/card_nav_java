@@ -1,5 +1,6 @@
 package com.tao.card_nav.mapper;
 
+import com.tao.card_nav.domain.FavoriteWithCard;
 import com.tao.card_nav.entity.FavoritesDo;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -14,4 +15,9 @@ public interface FavoritesDoMapper {
     List<FavoritesDo> selectAll();
 
     FavoritesDo selectByCardId(Long cardId);
+
+    /**
+     * 查询所有收藏，联表 cards 实时获取最新的分类和图标信息
+     */
+    List<FavoriteWithCard> selectAllWithCard();
 }

@@ -35,4 +35,33 @@
     from favorites
     where card_id = #{cardId,jdbcType=BIGINT}
   </select>
+
+  <resultMap id="FavoriteWithCardResultMap" type="com.tao.card_nav.domain.FavoriteWithCard">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="card_id" jdbcType="BIGINT" property="cardId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="url" jdbcType="VARCHAR" property="url" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="favicon" jdbcType="VARCHAR" property="favicon" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <select id="selectAllWithCard" resultMap="FavoriteWithCardResultMap">
+    select
+    f.id, f.card_id, f.title, f.url, f.description,
+    CASE
+        WHEN d.name IS NOT NULL THEN d.name
+        ELSE f.category
+        END as category,
+    CASE
+        WHEN c.favicon IS NOT NULL THEN c.favicon
+        ELSE f.favicon
+        END as favicon,
+    f.created_at
+  from favorites f
+  LEFT JOIN cards c ON f.card_id = c.id AND c.deleted_at IS NULL
+  left join category d on c.category_id = d.id
+  order by f.created_at DESC
+  </select>
 </mapper>
