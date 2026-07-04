@@ -30,16 +30,15 @@ langchain4j:
       model-name: ${MODEL_NAME}
       log-requests: false
       log-responses: false
-      max-tokens: 200000
+      max-tokens: 170000
       temperature: 0.5
-
     streaming-chat-model:
       base-url: ${API_URL}
       api-key: ${API_KEY}
       model-name: ${MODEL_NAME}
       log-requests: false
       log-responses: false
-      max-tokens: 200000     # ← 改成复数
+      max-tokens: 170000     # ← 改成复数
       temperature: 0.3
 
 server:
