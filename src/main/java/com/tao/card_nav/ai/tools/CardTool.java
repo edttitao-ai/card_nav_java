@@ -4,6 +4,7 @@ import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.entity.CardsDo;
 import com.tao.card_nav.entity.CategoryDo;
 import com.tao.card_nav.entity.SidebarDo;
+import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.service.CardsService;
 import com.tao.card_nav.service.CategoryService;
 import com.tao.card_nav.service.SidebarService;
@@ -48,15 +49,16 @@ public class CardTool {
      * 新增卡片
      * 返回格式: {"success": true, "card": {"id": 1, "title": "卡片标题", ...}}
      */
-    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL。分类和侧边栏参数支持两种方式：1) 直接传ID（categoryId、sidebarId）；2) 传分类名称或侧边栏名称（categoryName、sidebarLabel），后端会自动查找对应ID。如果都为空则不设置。返回创建成功的卡片信息")
+    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL，且分类和侧边栏必须确定（必填）。分类和侧边栏参数支持两种方式：1) 直接传ID（categoryId、sidebarId）；2) 传分类名称或侧边栏名称（categoryName、sidebarLabel），后端会自动查找对应ID。favicon 可不传，后端会从 URL 自动获取。返回创建成功的卡片信息")
     public String addCard(
             @P("卡片标题，不能为空") String title,
             @P("卡片URL，不能为空") String url,
             @P(value = "卡片描述，可为空", required = false) String description,
-            @P(value = "分类ID，可为空（与categoryName二选一）", required = false) Long categoryId,
-            @P(value = "侧边栏ID，可为空（与sidebarLabel二选一）", required = false) String sidebarId,
-            @P(value = "分类名称，可为空（与categoryId二选一，后端自动匹配ID）", required = false) String categoryName,
-            @P(value = "侧边栏名称，可为空（与sidebarId二选一，后端自动匹配ID）", required = false) String sidebarLabel) {
+            @P(value = "卡片 favicon 图标URL，可为空（空则从 URL 自动获取）", required = false) String favicon,
+            @P("分类ID（必填，与categoryName二选一）") Long categoryId,
+            @P("侧边栏ID（必填，与sidebarLabel二选一）") String sidebarId,
+            @P("分类名称（必填，与categoryId二选一，后端自动匹配ID）") String categoryName,
+            @P("侧边栏名称（必填，与sidebarId二选一，后端自动匹配ID）") String sidebarLabel) {
         // 如果传入的是名称而非ID，自动匹配
         if (categoryId == null && categoryName != null && !categoryName.isEmpty()) {
             categoryId = matchCategoryIdByName(categoryName);
@@ -65,10 +67,24 @@ public class CardTool {
             sidebarId = matchSidebarIdByLabel(sidebarLabel);
         }
 
+        // 校验分类与侧边栏都已确定
+        if (categoryId == null) {
+            throw new BusinessException(400, "卡片必须指定分类（请提供 categoryId 或 categoryName）");
+        }
+        if (sidebarId == null || sidebarId.isEmpty()) {
+            throw new BusinessException(400, "卡片必须指定侧边栏栏目（请提供 sidebarId 或 sidebarLabel）");
+        }
+
+        // favicon 自动兜底：未传则根据 URL 用 Google 服务拼一个
+        if (favicon == null || favicon.isEmpty()) {
+            favicon = buildFaviconFromUrl(url);
+        }
+
         CardsDo card = CardsDo.builder()
                 .title(title)
                 .url(url)
                 .description(description)
+                .favicon(favicon)
                 .categoryId(categoryId)
                 .sidebarId(sidebarId)
                 .build();
@@ -79,7 +95,22 @@ public class CardTool {
         result.put("card", savedCard);
         result.put("resolvedCategoryId", categoryId);
         result.put("resolvedSidebarId", sidebarId);
+        result.put("resolvedFavicon", favicon);
         return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 根据 URL 使用 Google favicon 服务兜底生成图标地址
+     */
+    private String buildFaviconFromUrl(String url) {
+        if (url == null || url.isEmpty()) return null;
+        try {
+            String domain = new java.net.URL(url).getHost();
+            if (domain == null || domain.isEmpty()) return null;
+            return "https://www.google.com/s2/favicons?domain=" + domain + "&sz=32";
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

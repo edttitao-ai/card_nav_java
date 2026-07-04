@@ -42,6 +42,22 @@ public class CardsService {
      * 新增卡片
      */
     public CardsDo addCard(CardsDo card) {
+        // 查重：先按 URL，再按 title，避免重复创建
+        if (card.getUrl() != null && !card.getUrl().isEmpty()) {
+            CardsDo existingByUrl = cardsMapper.selectByUrl(card.getUrl());
+            if (existingByUrl != null) {
+                throw new BusinessException(400, "该链接已存在卡片「" + existingByUrl.getTitle()
+                        + "」(id=" + existingByUrl.getId() + ")，无需重复添加");
+            }
+        }
+        if (card.getTitle() != null && !card.getTitle().isEmpty()) {
+            CardsDo existingByTitle = cardsMapper.selectByTitle(card.getTitle());
+            if (existingByTitle != null) {
+                throw new BusinessException(400, "已存在同标题的卡片「" + existingByTitle.getTitle()
+                        + "」(id=" + existingByTitle.getId() + ")，请更换标题");
+            }
+        }
+
         card.setCreatedAt(new Date());
         card.setUpdatedAt(new Date());
         card.setDeletedAt(null);

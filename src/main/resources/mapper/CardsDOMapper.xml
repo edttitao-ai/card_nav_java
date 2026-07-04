@@ -26,6 +26,20 @@
     LEFT JOIN category c ON cards.category_id = c.id
     where cards.id = #{id,jdbcType=BIGINT} AND cards.deleted_at IS NULL
   </select>
+  <select id="selectByUrl" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select cards.*, c.name as category_name
+    from cards
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.url = #{url,jdbcType=VARCHAR} AND cards.deleted_at IS NULL
+    limit 1
+  </select>
+  <select id="selectByTitle" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select cards.*, c.name as category_name
+    from cards
+    LEFT JOIN category c ON cards.category_id = c.id
+    where cards.title = #{title,jdbcType=VARCHAR} AND cards.deleted_at IS NULL
+    limit 1
+  </select>
   <select id="selectBySidebarId" parameterType="java.lang.String" resultMap="BaseResultMap">
     select cards.*, c.name as category_name
     from cards

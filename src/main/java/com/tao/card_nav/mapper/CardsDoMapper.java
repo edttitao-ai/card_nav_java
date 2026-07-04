@@ -13,6 +13,16 @@ public interface CardsDoMapper {
 
     CardsDo selectByPrimaryKey(Long id);
 
+    /**
+     * 按 URL 查重（排除软删除），用于新增前的去重
+     */
+    CardsDo selectByUrl(String url);
+
+    /**
+     * 按 title 查重（排除软删除），可选的辅助查重
+     */
+    CardsDo selectByTitle(String title);
+
     int updateByPrimaryKeySelective(CardsDo record);
 
     int updateByPrimaryKey(CardsDo record);
