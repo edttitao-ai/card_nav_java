@@ -44,7 +44,7 @@
       s.label as sidebarLabel,
       c.name as category
     FROM card_logs cl
-    LEFT JOIN cards cr ON cl.card_id = cr.id AND cr.deleted_at IS NULL
+    LEFT JOIN cards cr ON cl.card_id = cr.id
     LEFT JOIN sidebar s ON cr.sidebar_id = s.id
     LEFT JOIN category c ON cr.category_id = c.id
     ORDER BY cl.created_at DESC

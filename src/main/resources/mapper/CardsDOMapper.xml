@@ -121,15 +121,17 @@
     GROUP BY s.id, s.label, s.sort_order
     ORDER BY s.sort_order ASC
   </select>
-  <insert id="insert" parameterType="com.tao.card_nav.entity.CardsDo">
-    insert into cards (id, external_id, title, url, description, category_id, 
+  <insert id="insert" parameterType="com.tao.card_nav.entity.CardsDo"
+    useGeneratedKeys="true" keyProperty="id">
+    insert into cards (id, external_id, title, url, description, category_id,
       sidebar_id, favicon, pinned, created_at, updated_at, deleted_at)
-    values (#{id,jdbcType=BIGINT}, #{externalId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, 
-      #{url,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{categoryId,jdbcType=BIGINT}, 
-      #{sidebarId,jdbcType=VARCHAR}, #{favicon,jdbcType=VARCHAR}, #{pinned,jdbcType=BIT}, 
+    values (#{id,jdbcType=BIGINT}, #{externalId,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR},
+      #{url,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{categoryId,jdbcType=BIGINT},
+      #{sidebarId,jdbcType=VARCHAR}, #{favicon,jdbcType=VARCHAR}, #{pinned,jdbcType=BIT},
       #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, #{deletedAt,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.CardsDo">
+  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.CardsDo"
+    useGeneratedKeys="true" keyProperty="id">
     insert into cards
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">id,</if>

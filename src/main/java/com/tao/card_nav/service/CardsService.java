@@ -1,9 +1,12 @@
 package com.tao.card_nav.service;
 
 import com.tao.card_nav.entity.CardsDo;
+import com.tao.card_nav.event.CardChangedEvent;
+import com.tao.card_nav.event.CardChangedEvent.CardAction;
 import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.mapper.CardsDoMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -15,6 +18,7 @@ import java.util.UUID;
 public class CardsService {
 
     private final CardsDoMapper cardsMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 查询所有卡片，支持按 sidebarId 过滤
@@ -94,6 +98,7 @@ public class CardsService {
             card.setExternalId(generateExternalId());
         }
         cardsMapper.insertSelective(card);
+        publish(card.getId(), CardAction.INSERT);
         return card;
     }
 
@@ -102,6 +107,16 @@ public class CardsService {
      */
     private String generateExternalId() {
         return System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * 发布卡片变更事件（用 cardId = 当前方法操作的 id；调用方应保证 id 非空）
+     */
+    private void publish(Long cardId, CardAction action) {
+        if (cardId == null) {
+            return;
+        }
+        eventPublisher.publishEvent(new CardChangedEvent(cardId, action));
     }
 
     /**
@@ -136,7 +151,9 @@ public class CardsService {
         // 不允许通过更新接口删除卡片
         card.setDeletedAt(null);
         cardsMapper.updateByPrimaryKeySelective(card);
-        return cardsMapper.selectByPrimaryKey(id);
+        CardsDo saved = cardsMapper.selectByPrimaryKey(id);
+        publish(id, CardAction.UPDATE);
+        return saved;
     }
 
     /**
@@ -148,6 +165,7 @@ public class CardsService {
             throw new BusinessException("卡片不存在");
         }
         cardsMapper.softDelete(id);
+        publish(id, CardAction.DELETE);
     }
 
     /**
@@ -161,6 +179,7 @@ public class CardsService {
         card.setPinned(pinned);
         card.setUpdatedAt(new Date());
         cardsMapper.updateByPrimaryKeySelective(card);
+        publish(id, CardAction.TOGGLE_PINNED);
         return card;
     }
 }
