@@ -11,6 +11,7 @@ import com.tao.card_nav.service.SidebarService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -29,6 +30,16 @@ public class CardTool implements AiToolProvider {
     private final CardsService cardsService;
     private final CategoryService categoryService;
     private final SidebarService sidebarService;
+
+    /**
+     * AI 删除卡片所需的"确认指令"。
+     * <p>读取 application.yml 里的 {@code card-nav.security.delete-confirmation}，
+     * 其值是占位符 {@code ${CARD_NAV_SECURITY_DELETE_CONFIRMATION}}，运行时由 dotenv 加载的 .env 注入。
+     * <p>严格模式：未配置环境变量时应用启动失败（fail-fast），不会用任何占位符兜底。
+     * <p>校验规则：字面精确 equals（不 trim、区分大小写），前后空格会导致校验失败。
+     */
+    @Value("${card-nav.security.delete-confirmation}")
+    private String expectedConfirmation;
 
     /**
      * 根据卡片ID查询卡片详情
@@ -307,10 +318,40 @@ public class CardTool implements AiToolProvider {
     @Tool(name = "切换置顶状态", value = "设置卡片的置顶状态，pinned为true表示置顶，false表示取消置顶")
     public String togglePinned(@P("卡片ID") Long id, @P("是否置顶，true表示置顶，false表示取消置顶") Boolean pinned) {
         CardsDo card = cardsService.togglePinned(id, pinned);
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("card", card);
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 删除卡片（AI 场景，需要确认指令）
+     * <p>校验规则：
+     * <ul>
+     *   <li>confirmation 必须与 {@code expectedConfirmation} 字面精确 equals（不 trim、区分大小写）</li>
+     *   <li>校验失败抛 BusinessException，提示模糊，不暴露密码长度/字符集</li>
+     *   <li>校验通过后调用 cardsService.deleteCard 走软删除 + 发布 CardChangedEvent</li>
+     * </ul>
+     */
+    @Tool(name = "删除卡片", value = "删除指定卡片（软删除）。这是一个高危操作，调用前必须先通过「查询卡片」或「搜索卡片」核对要删除的卡片信息。调用本工具时，confirmation 参数必须传入用户在自己上一条消息里原文提供的专属密码串（由系统后端按字面精确 equals 校验，不做任何模糊匹配或猜测），不要让用户输入任何你自创的口令（如'确认删除','yes'等），如未提供正确的确认指令，必须拒绝执行")
+    public String deleteCard(@P("卡片ID") Long cardId, @P("用户原文提供的专属密码串，由系统按字面精确匹配校验") String confirmation) {
+        if (cardId == null || cardId <= 0) {
+            throw new BusinessException(400, "卡片ID不合法");
+        }
+        // 字面精确匹配：不 trim、不 lowercase、不忽略 null
+        if (confirmation == null || !confirmation.equals(expectedConfirmation)) {
+            // 模糊提示：不透露密码长度、字符集、是否包含空格等任何线索
+            throw new BusinessException(403, "确认指令不匹配，请用户提供完整且准确的确认指令后再试");
+        }
+        // 校验通过：先确认卡片存在（deleteCard 内部已校验，这里加一次是给 AI 更明确的反馈）
+        CardsDo existing = cardsService.getCardById(cardId);
+        cardsService.deleteCard(cardId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("deletedCardId", existing.getId());
+        result.put("deletedTitle", existing.getTitle());
         return JSONUtil.toJsonStr(result);
     }
 }

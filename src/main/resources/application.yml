@@ -24,3 +24,10 @@ mybatis:
 
 server:
   port: ${SERVER_PORT:3002}
+
+# AI 删除卡片所需的确认指令。
+# 占位符从环境变量读取，dotenv 加载 .env 后会注入到 System Properties。
+# 注意：未配置 CARD_NAV_SECURITY_DELETE_CONFIRMATION 时应用启动失败（fail-fast）。
+card-nav:
+  security:
+    delete-confirmation: ${CARD_NAV_SECURITY_DELETE_CONFIRMATION}
