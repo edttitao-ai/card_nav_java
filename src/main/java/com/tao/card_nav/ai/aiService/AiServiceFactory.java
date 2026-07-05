@@ -1,8 +1,6 @@
 package com.tao.card_nav.ai.aiService;
 
-import com.tao.card_nav.ai.tools.CardTool;
-import com.tao.card_nav.ai.tools.CategoryTool;
-import com.tao.card_nav.ai.tools.FavoriteTool;
+import com.tao.card_nav.ai.tools.AiToolRegistry;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -26,11 +24,7 @@ public class AiServiceFactory {
     @Resource(name = "openAiStreamingChatModel")
     private final StreamingChatModel streamingChatModel;
 
-    private final CardTool cardTool;
-
-    private final FavoriteTool favoriteTool;
-
-    private final CategoryTool categoryTool;
+    private final AiToolRegistry toolRegistry;
 
     private final ChatMemoryProvider chatMemoryProvider;
 
@@ -38,7 +32,7 @@ public class AiServiceFactory {
         return AiServices.builder(AiServiceAssistant.class)
                 .chatModel(chatModel)
                 .streamingChatModel(streamingChatModel)
-                .tools(cardTool, favoriteTool, categoryTool)
+                .tools(toolRegistry.activeTools().toArray())
                 .chatMemoryProvider(chatMemoryProvider)
                 .build();
 

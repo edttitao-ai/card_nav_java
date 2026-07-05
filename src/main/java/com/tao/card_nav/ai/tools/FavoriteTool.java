@@ -18,7 +18,12 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class FavoriteTool {
+public class FavoriteTool implements AiToolProvider {
+
+    @Override
+    public List<Object> tools() {
+        return List.of(this);
+    }
 
     private final FavoritesService favoritesService;
 

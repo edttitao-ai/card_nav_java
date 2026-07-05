@@ -13,7 +13,12 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class CategoryTool {
+public class CategoryTool implements AiToolProvider {
+
+    @Override
+    public List<Object> tools() {
+        return List.of(this);
+    }
 
     private final CategoryService categoryService;
 

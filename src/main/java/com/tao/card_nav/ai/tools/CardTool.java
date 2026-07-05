@@ -19,7 +19,12 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class CardTool {
+public class CardTool implements AiToolProvider {
+
+    @Override
+    public List<Object> tools() {
+        return List.of(this);
+    }
 
     private final CardsService cardsService;
     private final CategoryService categoryService;
