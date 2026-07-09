@@ -5,9 +5,14 @@ import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.ai.aiService.AiServiceAssistant;
 import com.tao.card_nav.ai.aiService.ChatSessionRegistry;
 import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.exception.RateLimitException;
 import com.tao.card_nav.exception.ThrowUtils;
+import com.tao.card_nav.service.RateLimitService;
+import com.tao.card_nav.util.ClientIpUtils;
 
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -18,6 +23,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/chat")
 public class AiChatController {
@@ -28,8 +34,34 @@ public class AiChatController {
     @Resource
     private ChatSessionRegistry sessionRegistry;
 
+    @Resource
+    private RateLimitService rateLimitService;
+
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chat(@RequestBody Map<String, String> payload) {
+    public Flux<ServerSentEvent<String>> chat(@RequestBody Map<String, String> payload, HttpServletRequest request) {
+        String clientIp = ClientIpUtils.resolve(request);
+        System.out.println("clientIp:" + clientIp);
+        try {
+            rateLimitService.acquireOrThrow(clientIp);
+        } catch (RateLimitException rle) {
+            // 限流分支：以 SSE 流内事件通知前端，而非直接 429 拒绝
+            // 原因：流式响应一旦订阅就难以回退为同步错误
+            log.info("AI 聊天请求被限流 clientIp={}", clientIp);
+            ServerSentEvent<String> rateLimitedEvent = ServerSentEvent.<String>builder()
+                    .event("rate_limited")
+                    .data(JSONUtil.toJsonStr(Map.of(
+                            "clientIp", clientIp,
+                            "retryAfterSeconds", rle.getRetryAfterSeconds(),
+                            "message", "请求过于频繁，请稍后再试"
+                    )))
+                    .build();
+            ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder()
+                    .event("done")
+                    .data("")
+                    .build();
+            return Flux.concat(Mono.just(rateLimitedEvent), Mono.just(doneEvent));
+        }
+
         String userMessage = payload.get("userMessage");
         String sessionId = payload.get("sessionId");
         ThrowUtils.throwIf(userMessage == null || userMessage.trim().isEmpty(), ErrorCode.PARAMS_ERROR, "用户消息不能为空");

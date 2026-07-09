@@ -31,3 +31,15 @@ server:
 card-nav:
   security:
     delete-confirmation: ${CARD_NAV_SECURITY_DELETE_CONFIRMATION}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      aiChatByIp:
+        # 每 IP 每分钟 5 次（默认配置，可通过 AI_CHAT_RATE_LIMIT_* 环境变量覆盖）
+        limit-for-period: ${AI_CHAT_RATE_LIMIT_PER_MINUTE:5}
+        limit-refresh-period: 1m
+        # 超额立即拒绝，不排队等待令牌
+        timeout-duration: 0
+        # 同一实例可创建的子限流器上限（防止恶意构造大量 IP 撑爆内存）
+        max-allowable-tags: 10000

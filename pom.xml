@@ -83,6 +83,18 @@
             <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
+        <!-- Resilience4j 限流（AI 聊天接口按 IP 限流） -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-reactor</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
         <!-- Cache: Spring Cache + Caffeine（用于侧边栏/分类读多写少场景） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

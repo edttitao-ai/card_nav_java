@@ -125,6 +125,29 @@ java -jar target/card_nav-0.0.1-SNAPSHOT.jar
 | `/api/stats` | GET | 获取统计数据 |
 | `/api/visitors` | GET | 获取访客日志 |
 | `/api/categories` | GET | 获取分类统计 |
+| `/api/chat` | POST | AI 流式聊天（SSE，返回 `rate_limited` 事件表示触发限流） |
+| `/api/chat/stop` | POST | 中断指定 sessionId 的 AI 流式会话 |
+
+## AI 聊天限流
+
+`POST /api/chat` 默认按客户端 IP 限流，**每 IP 每分钟 20 次**。
+
+- **算法**：Resilience4j RateLimiter（令牌桶）
+- **客户端 IP 来源**：`X-Forwarded-For` → `X-Real-IP` → `request.getRemoteAddr()`
+- **触发限流**：返回 SSE 流，第一个事件为 `event: rate_limited`（payload 含 `retryAfterSeconds`），第二个事件为 `event: done`
+- **多实例限制**：当前是 JVM 内存版，**N 个实例部署时单 IP 实际配额 = 20 × N / 分钟**。严格跨实例共享需要后续切换到 Bucket4j + Redis
+- **反代要求**：必须由反代正确写入 `X-Forwarded-For`（或 `X-Real-IP`），否则所有请求会拿到反代 IP
+
+### 调整配额
+
+通过环境变量覆盖，无需改代码：
+
+```bash
+# 把 AI 聊天限流调到每分钟 60 次
+AI_CHAT_RATE_LIMIT_PER_MINUTE=60
+```
+
+完整配置在 `application.yml` 的 `resilience4j.ratelimiter.instances.aiChatByIp` 块。
 
 ## 统一响应格式
 
@@ -155,3 +178,6 @@ A: 后端已配置 CORS，允许前端开发服务器访问。如需修改，编
 
 **Q: 如何查看日志？**
 A: 启动后控制台会输出日志，也可在 `application.yml` 中配置日志输出到文件。
+
+**Q: AI 聊天触发限流，前端怎么收到提示？**
+A: 不要用 fetch 的 status code 判断（限流返回的也是 200）。监听 SSE 事件的 `event` 字段，看到 `rate_limited` 即触发限流，payload 里 `retryAfterSeconds` 提示客户端等多少秒再试。详见上文"AI 聊天限流"章节。
