@@ -36,8 +36,8 @@ resilience4j:
   ratelimiter:
     instances:
       aiChatByIp:
-        # 每 IP 每分钟 5 次（默认配置，可通过 AI_CHAT_RATE_LIMIT_* 环境变量覆盖）
-        limit-for-period: ${AI_CHAT_RATE_LIMIT_PER_MINUTE:5}
+        # 每 IP 每分钟 10 次（默认配置，可通过 AI_CHAT_RATE_LIMIT_* 环境变量覆盖）
+        limit-for-period: ${AI_CHAT_RATE_LIMIT_PER_MINUTE:10}
         limit-refresh-period: 1m
         # 超额立即拒绝，不排队等待令牌
         timeout-duration: 0

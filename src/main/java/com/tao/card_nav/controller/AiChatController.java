@@ -40,7 +40,6 @@ public class AiChatController {
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chat(@RequestBody Map<String, String> payload, HttpServletRequest request) {
         String clientIp = ClientIpUtils.resolve(request);
-        System.out.println("clientIp:" + clientIp);
         try {
             rateLimitService.acquireOrThrow(clientIp);
         } catch (RateLimitException rle) {
