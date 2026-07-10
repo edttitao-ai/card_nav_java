@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 @Service
 public class RateLimitService {
 
-    /** 配置在 application.yml 的限流实例名（每 IP 每分钟 20 次） */
+    /** 配置在 application.yml 的限流实例名（每 IP 每分钟 5 次） */
     public static final String AI_CHAT_INSTANCE = "aiChatByIp";
 
     /** 按 key 缓存的 RateLimiter 实例，实现"每 IP 一个独立令牌桶" */

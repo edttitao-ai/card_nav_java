@@ -4,11 +4,11 @@ package com.tao.card_nav.controller;
 import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.ai.aiService.AiServiceAssistant;
 import com.tao.card_nav.ai.aiService.ChatSessionRegistry;
+import com.tao.card_nav.annotation.RateLimitKey;
+import com.tao.card_nav.annotation.RateLimitedByIp;
 import com.tao.card_nav.exception.ErrorCode;
 import com.tao.card_nav.exception.RateLimitException;
 import com.tao.card_nav.exception.ThrowUtils;
-import com.tao.card_nav.service.RateLimitService;
-import com.tao.card_nav.util.ClientIpUtils;
 
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,33 +34,18 @@ public class AiChatController {
     @Resource
     private ChatSessionRegistry sessionRegistry;
 
-    @Resource
-    private RateLimitService rateLimitService;
-
+    /**
+     * AI 流式聊天接口。
+     *
+     * <p>限流由 {@link RateLimitedByIp} 切面按 IP 拦截；触发时走 {@link #rateLimitFallback}。
+     * 客户端 IP 通过 {@link RateLimitKey} 注入，业务方法无需自己解析。
+     */
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chat(@RequestBody Map<String, String> payload, HttpServletRequest request) {
-        String clientIp = ClientIpUtils.resolve(request);
-        try {
-            rateLimitService.acquireOrThrow(clientIp);
-        } catch (RateLimitException rle) {
-            // 限流分支：以 SSE 流内事件通知前端，而非直接 429 拒绝
-            // 原因：流式响应一旦订阅就难以回退为同步错误
-            log.info("AI 聊天请求被限流 clientIp={}", clientIp);
-            ServerSentEvent<String> rateLimitedEvent = ServerSentEvent.<String>builder()
-                    .event("rate_limited")
-                    .data(JSONUtil.toJsonStr(Map.of(
-                            "clientIp", clientIp,
-                            "retryAfterSeconds", rle.getRetryAfterSeconds(),
-                            "message", "请求过于频繁，请稍后再试"
-                    )))
-                    .build();
-            ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder()
-                    .event("done")
-                    .data("")
-                    .build();
-            return Flux.concat(Mono.just(rateLimitedEvent), Mono.just(doneEvent));
-        }
-
+    @RateLimitedByIp(fallbackMethod = "rateLimitFallback")
+    public Flux<ServerSentEvent<String>> chat(
+            @RequestBody Map<String, String> payload,
+            HttpServletRequest request,
+            @RateLimitKey String clientIp) {
         String userMessage = payload.get("userMessage");
         String sessionId = payload.get("sessionId");
         ThrowUtils.throwIf(userMessage == null || userMessage.trim().isEmpty(), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
@@ -99,6 +84,34 @@ public class AiChatController {
                                 .data("")
                                 .build()
                 ));
+    }
+
+    /**
+     * 限流触发时的降级方法。
+     *
+     * <p>签名必须与 {@link #chat} 一致，末尾追加一个 {@link RateLimitException} 参数。
+     * 由 {@code RateLimitedByIpAspect} 通过反射调用。
+     */
+    @SuppressWarnings("unused") // 通过反射被 AOP 调用
+    private Flux<ServerSentEvent<String>> rateLimitFallback(
+            Map<String, String> payload,
+            HttpServletRequest request,
+            String clientIp,
+            RateLimitException ex) {
+        log.info("AI 聊天请求被限流 clientIp={}", clientIp);
+        ServerSentEvent<String> rateLimitedEvent = ServerSentEvent.<String>builder()
+                .event("rate_limited")
+                .data(JSONUtil.toJsonStr(Map.of(
+                        "clientIp", clientIp,
+                        "retryAfterSeconds", ex.getRetryAfterSeconds(),
+                        "message", "请求过于频繁，请稍后再试"
+                )))
+                .build();
+        ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder()
+                .event("done")
+                .data("")
+                .build();
+        return Flux.concat(Mono.just(rateLimitedEvent), Mono.just(doneEvent));
     }
 
     /**

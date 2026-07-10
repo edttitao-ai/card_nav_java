@@ -37,9 +37,25 @@ resilience4j:
     instances:
       aiChatByIp:
         # 每 IP 每分钟 10 次（默认配置，可通过 AI_CHAT_RATE_LIMIT_* 环境变量覆盖）
-        limit-for-period: ${AI_CHAT_RATE_LIMIT_PER_MINUTE:10}
+        limit-for-period: ${AI_CHAT_RATE_LIMIT_PER_MINUTE:5}
         limit-refresh-period: 1m
         # 超额立即拒绝，不排队等待令牌
         timeout-duration: 0
         # 同一实例可创建的子限流器上限（防止恶意构造大量 IP 撑爆内存）
         max-allowable-tags: 10000
+
+# Actuator / Micrometer Prometheus 指标暴露
+# 抓取端点：GET /actuator/prometheus
+# 生产环境建议配合反向代理做访问控制（内网/VPN），不要直接公网暴露
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      access: read_only
+  prometheus:
+    metrics:
+      export:
+        enabled: true

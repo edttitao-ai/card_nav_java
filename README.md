@@ -130,13 +130,37 @@ java -jar target/card_nav-0.0.1-SNAPSHOT.jar
 
 ## AI 聊天限流
 
-`POST /api/chat` 默认按客户端 IP 限流，**每 IP 每分钟 20 次**。
+`POST /api/chat` 默认按客户端 IP 限流，**每 IP 每分钟 10 次**。
 
-- **算法**：Resilience4j RateLimiter（令牌桶）
+- **算法**：Resilience4j RateLimiter（令牌桶），由自造注解 `@RateLimitedByIp` + AOP 切面触发
 - **客户端 IP 来源**：`X-Forwarded-For` → `X-Real-IP` → `request.getRemoteAddr()`
 - **触发限流**：返回 SSE 流，第一个事件为 `event: rate_limited`（payload 含 `retryAfterSeconds`），第二个事件为 `event: done`
-- **多实例限制**：当前是 JVM 内存版，**N 个实例部署时单 IP 实际配额 = 20 × N / 分钟**。严格跨实例共享需要后续切换到 Bucket4j + Redis
+- **多实例限制**：当前是 JVM 内存版，**N 个实例部署时单 IP 实际配额 = 10 × N / 分钟**。严格跨实例共享需要后续切换到 Bucket4j + Redis
 - **反代要求**：必须由反代正确写入 `X-Forwarded-For`（或 `X-Real-IP`），否则所有请求会拿到反代 IP
+
+### 用法：在 controller 方法上贴注解
+
+```java
+@PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+@RateLimitedByIp(fallbackMethod = "rateLimitFallback")
+public Flux<ServerSentEvent<String>> chat(
+        @RequestBody Map<String, String> payload,
+        HttpServletRequest request,
+        @RateLimitKey String clientIp) {     // IP 由切面自动注入，业务无需解析
+    // 业务逻辑...
+}
+
+// fallback 签名：原方法参数列表 + 末尾追加 RateLimitException
+private Flux<ServerSentEvent<String>> rateLimitFallback(
+        Map<String, String> payload, HttpServletRequest request,
+        String clientIp, RateLimitException ex) {
+    return Flux.just(/* rate_limited 事件 + done 事件 */);
+}
+```
+
+### 为什么不用 Resilience4j 标准 `@RateLimiter`？
+
+`@RateLimiter` 的 `name` 是静态配置，所有调用共享一个 RateLimiter 实例，**无法按 IP 各自一个 bucket**。本项目用自造注解 `@RateLimitedByIp` + 切面在 AOP 层动态按 IP 取 RateLimiter（复用底层 `RateLimitService` 的 `limiterCache`），兼顾注解式写法的清爽与"每 IP 隔离"的语义。
 
 ### 调整配额
 
@@ -148,6 +172,26 @@ AI_CHAT_RATE_LIMIT_PER_MINUTE=60
 ```
 
 完整配置在 `application.yml` 的 `resilience4j.ratelimiter.instances.aiChatByIp` 块。
+
+### Prometheus 指标
+
+应用通过 Spring Boot Actuator + Micrometer 暴露限流指标：
+
+- **端点**：`GET /actuator/prometheus`（文本格式）
+- **核心指标**：`rate_limit_requests_total`（Counter）
+  - `method`（tag）：被拦截的 controller 方法名，如 `chat`
+  - `outcome`（tag）：`allowed` / `limited`
+- **示例查询**：
+  - 过去 5 分钟限流命中数（PromQL）：
+    ```promql
+    sum by (method) (rate(rate_limit_requests_total{outcome="limited"}[5m]))
+    ```
+  - 限流命中率：
+    ```promql
+    sum(rate(rate_limit_requests_total{outcome="limited"}[5m]))
+      / sum(rate(rate_limit_requests_total[5m]))
+    ```
+- **生产建议**：actuator 端点直接暴露在公网有信息泄露风险（jvm、tomcat 等内部指标），务必通过反代做访问控制（内网 IP 白名单 / 鉴权网关），不要让 `/actuator/**` 直接对外可访问。
 
 ## 统一响应格式
 
