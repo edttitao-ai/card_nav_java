@@ -1,6 +1,5 @@
 package com.tao.card_nav.exception;
 
-import com.tao.card_nav.dict.ResultCodeEnum;
 import lombok.Getter;
 
 @Getter
@@ -9,7 +8,8 @@ public class BusinessException extends RuntimeException {
 
     public BusinessException(String message) {
         super(message);
-        this.code = ResultCodeEnum.BAD_REQUEST.getCode();
+        // 兼容旧签名：默认按"参数错误"处理。新代码请直接传 ErrorCode。
+        this.code = ErrorCode.PARAMS_ERROR.getCode();
     }
 
     public BusinessException(ErrorCode errorCode) {

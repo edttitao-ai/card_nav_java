@@ -66,12 +66,6 @@ public class CardsController {
             card.setCategoryId(resolveCategoryId(card.getCategory()));
         }
 
-        // 防止传入的 sidebarId 实际是 label 而非 id
-        if (card.getSidebarId() != null && !card.getSidebarId().isEmpty()) {
-            // 简化：保留原值。复杂场景下应做"label → id" 解析。
-            // 这里仅保证 id 字段非空。
-        }
-
         return Result.success(cardsService.updateCard(id, card));
     }
 
