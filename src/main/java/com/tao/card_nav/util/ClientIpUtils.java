@@ -1,6 +1,9 @@
 package com.tao.card_nav.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 客户端真实 IP 解析工具。
@@ -72,5 +75,30 @@ public final class ClientIpUtils {
             return LOCALHOST_IPV4;
         }
         return ip;
+    }
+
+    /**
+     * 从 {@link RequestContextHolder} 取当前线程绑定的 request 并解析 IP。
+     *
+     * <p>用于事件监听器 / 异步回调等"已知处于 Web 请求线程内，但当前方法签名拿不到
+     * {@link HttpServletRequest}"的场景。若当前线程没有 request（例如 Reactor /
+     * 异步线程、定时任务），返回 {@code null}，由调用方决定业务级 fallback。
+     *
+     * <p>注意：不会因此抛出异常，框架未持有 request 时一律返回 null。
+     */
+    public static String resolveCurrent() {
+        try {
+            RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+            if (!(attrs instanceof ServletRequestAttributes sra)) {
+                return null;
+            }
+            HttpServletRequest request = sra.getRequest();
+            if (request == null) {
+                return null;
+            }
+            return resolve(request);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

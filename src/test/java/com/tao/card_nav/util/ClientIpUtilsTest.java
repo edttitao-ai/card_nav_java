@@ -1,13 +1,21 @@
 package com.tao.card_nav.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ClientIpUtilsTest {
+
+    @AfterEach
+    void tearDown() {
+        // 避免测试间 RequestContextHolder 状态污染
+        RequestContextHolder.resetRequestAttributes();
+    }
 
     @Test
     void resolve_prefersXForwardedFor_firstHop() {
@@ -70,5 +78,24 @@ class ClientIpUtilsTest {
         when(req.getRemoteAddr()).thenReturn("127.0.0.1");
 
         assertThat(ClientIpUtils.resolve(req)).isEqualTo("198.51.100.7");
+    }
+
+    @Test
+    void resolveCurrent_returnsNullWhenNoRequestBound() {
+        // 未调用 setRequestAttributes，RequestContextHolder 返回 null
+        assertThat(ClientIpUtils.resolveCurrent()).isNull();
+    }
+
+    @Test
+    void resolveCurrent_resolvesFromCurrentRequest() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getHeader("X-Forwarded-For")).thenReturn("203.0.113.99, 10.0.0.1");
+        when(req.getRemoteAddr()).thenReturn("127.0.0.1");
+
+        org.springframework.web.context.request.ServletRequestAttributes attrs =
+                new org.springframework.web.context.request.ServletRequestAttributes(req);
+        RequestContextHolder.setRequestAttributes(attrs);
+
+        assertThat(ClientIpUtils.resolveCurrent()).isEqualTo("203.0.113.99");
     }
 }
