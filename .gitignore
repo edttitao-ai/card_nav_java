@@ -38,3 +38,7 @@ sql/init_data.sql
 
 ### 环境变量文件 ###
 .env
+/.reasonix/desktop-topic-title-sources.json
+/.reasonix/desktop-topic-titles.json
+/.reasonix/desktop-topic-created-at.json
+/.reasonix/desktop-topic-auto-title-meta.json
