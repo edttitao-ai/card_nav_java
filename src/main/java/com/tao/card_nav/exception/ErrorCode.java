@@ -7,6 +7,8 @@ public enum ErrorCode {
 
     SUCCESS(200, "ok"),
     PARAMS_ERROR(400, "请求参数错误"),
+    CARD_URL_CONFLICT(400, "卡片链接重复"),
+    CARD_TITLE_CONFLICT(400, "卡片标题重复"),
     NOT_LOGIN_ERROR(401, "未登录"),
     NO_AUTH_ERROR(401, "无权限"),
     TOO_MANY_REQUEST(429, "请求过于频繁"),
