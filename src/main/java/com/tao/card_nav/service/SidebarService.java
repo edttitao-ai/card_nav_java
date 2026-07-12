@@ -29,6 +29,29 @@ public class SidebarService {
     }
 
     /**
+     * 按侧边栏 label 精确匹配 ID。
+     *
+     * <p><b>语义：仅精确 {@code equals} 匹配，不做 {@code contains} 模糊兜底</b>。
+     * 消除 "AI 写作" 误命中 "AI 写作工具" 这类静默错误。
+     *
+     * <p>性能：复用 {@link #getAllSidebars()} 的 Caffeine 缓存，单循环 O(n)；
+     * 后续可下沉到 mapper 单条 SQL。
+     *
+     * @return 命中返回侧边栏 id；未命中返回 {@code null}
+     */
+    public String resolveIdByLabel(String label) {
+        if (label == null) {
+            return null;
+        }
+        for (SidebarDo s : getAllSidebars()) {
+            if (s != null && label.equals(s.getLabel())) {
+                return s.getId();
+            }
+        }
+        return null;
+    }
+
+    /**
      * 新增侧边栏（写后清空缓存）
      */
     @CacheEvict(value = CacheConfig.CACHE_SIDEBARS, allEntries = true)

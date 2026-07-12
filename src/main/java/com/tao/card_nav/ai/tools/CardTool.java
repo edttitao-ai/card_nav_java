@@ -2,7 +2,6 @@ package com.tao.card_nav.ai.tools;
 
 import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.entity.CardsDo;
-import com.tao.card_nav.entity.CategoryDo;
 import com.tao.card_nav.entity.SidebarDo;
 import com.tao.card_nav.exception.BusinessException;
 import com.tao.card_nav.service.CardsService;
@@ -133,7 +132,7 @@ public class CardTool implements AiToolProvider {
      * 新增卡片
      * 返回格式: {"success": true, "card": {"id": 1, "title": "卡片标题", ...}}
      */
-    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL，且分类和侧边栏必须确定（必填）。分类和侧边栏参数支持两种方式：1) 直接传ID（categoryId、sidebarId）；2) 传分类名称或侧边栏名称（categoryName、sidebarLabel），后端会自动查找对应ID。favicon 可不传，后端会从 URL 自动获取。返回创建成功的卡片信息")
+    @Tool(name = "新增卡片", value = "创建新卡片，需要提供标题和URL，且分类和侧边栏必须确定（必填）。分类和侧边栏参数支持两种方式：1) 直接传ID（categoryId、sidebarId，推荐，优先使用）；2) 传分类名称或侧边栏名称（categoryName、sidebarLabel），后端会按精确名称匹配对应ID。注意：name/label 仅做精确匹配，不会做模糊兜底（例如 'AI' 不会匹配 'AI 写作工具'）。如果不确定 ID，请先调用『查询分类列表』或『查询侧边栏列表』拿到 ID 再传。favicon 可不传，后端会从 URL 自动获取。返回创建成功的卡片信息")
     public String addCard(
             @P("卡片标题，不能为空") String title,
             @P("卡片URL，不能为空") String url,
@@ -198,43 +197,33 @@ public class CardTool implements AiToolProvider {
     }
 
     /**
-     * 根据分类名称匹配分类ID（精确优先，模糊兜底）
+     * 根据分类名称匹配分类ID（仅精确 equals，不做 contains 模糊兜底）。
+     * <p>逻辑下沉到 {@link CategoryService#resolveIdByName(String)}，本方法仅做 trim 归一。
      */
     private Long matchCategoryIdByName(String name) {
-        List<CategoryDo> categories = categoryService.getAllCategories();
-        // 精确匹配
-        for (CategoryDo c : categories) {
-            if (c.getName() != null && c.getName().equals(name)) {
-                return c.getId();
-            }
+        if (name == null) {
+            return null;
         }
-        // 包含匹配
-        for (CategoryDo c : categories) {
-            if (c.getName() != null && c.getName().contains(name)) {
-                return c.getId();
-            }
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            return null;
         }
-        return null;
+        return categoryService.resolveIdByName(trimmed);
     }
 
     /**
-     * 根据侧边栏名称匹配侧边栏ID（精确优先，模糊兜底）
+     * 根据侧边栏 label 匹配侧边栏ID（仅精确 equals，不做 contains 模糊兜底）。
+     * <p>逻辑下沉到 {@link SidebarService#resolveIdByLabel(String)}，本方法仅做 trim 归一。
      */
     private String matchSidebarIdByLabel(String label) {
-        List<SidebarDo> sidebars = sidebarService.getAllSidebars();
-        // 精确匹配
-        for (SidebarDo s : sidebars) {
-            if (s.getLabel() != null && s.getLabel().equals(label)) {
-                return s.getId();
-            }
+        if (label == null) {
+            return null;
         }
-        // 包含匹配
-        for (SidebarDo s : sidebars) {
-            if (s.getLabel() != null && s.getLabel().contains(label)) {
-                return s.getId();
-            }
+        String trimmed = label.trim();
+        if (trimmed.isEmpty()) {
+            return null;
         }
-        return null;
+        return sidebarService.resolveIdByLabel(trimmed);
     }
 
     /**
@@ -247,7 +236,7 @@ public class CardTool implements AiToolProvider {
      *   - 直接传 ID（categoryId / sidebarId）
      *   - 或者传名称（categoryName / sidebarLabel），后端自动匹配
      */
-    @Tool(name = "编辑卡片", value = "修改已存在的卡片信息。必填：cardId。可选字段（不传则保留原值）：title、url、description、favicon、categoryId/sidebarId（或者对应的 categoryName/sidebarLabel）。修改链接或标题时会校验全表唯一冲突。返回更新后的卡片信息")
+    @Tool(name = "编辑卡片", value = "修改已存在的卡片信息。必填：cardId。可选字段（不传则保留原值）：title、url、description、favicon、categoryId/sidebarId（或者对应的 categoryName/sidebarLabel）。name/label 仅做精确匹配、不会做模糊兜底（'AI' 不会匹配 'AI 写作工具'）。修改链接或标题时会校验全表唯一冲突。返回更新后的卡片信息")
     public String updateCard(
             @P("卡片ID（必填）") Long cardId,
             @P(value = "新标题（可选，不传不改）", required = false) String title,

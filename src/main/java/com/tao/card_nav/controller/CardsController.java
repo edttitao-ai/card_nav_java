@@ -1,12 +1,12 @@
 package com.tao.card_nav.controller;
 
 import com.tao.card_nav.entity.CardsDo;
-import com.tao.card_nav.entity.CategoryDo;
 import com.tao.card_nav.exception.ErrorCode;
 import com.tao.card_nav.exception.ThrowUtils;
 import com.tao.card_nav.mapper.CategoryDoMapper;
 import com.tao.card_nav.result.Result;
 import com.tao.card_nav.service.CardsService;
+import com.tao.card_nav.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +18,7 @@ import java.util.List;
 public class CardsController {
 
     private final CardsService cardsService;
+    private final CategoryService categoryService;
     private final CategoryDoMapper categoryMapper;
 
     /**
@@ -90,21 +91,17 @@ public class CardsController {
     }
 
     /**
-     * 把"分类名"解析成分类 ID（精确优先，模糊兜底）
+     * 把"分类名"解析成分类 ID（仅精确 equals，不再做 contains 模糊兜底）。
+     * <p>统一委托给 {@link CategoryService#resolveIdByName(String)}，消除与 CardTool 的逻辑重复。
      */
     private Long resolveCategoryId(String name) {
-        List<CategoryDo> all = categoryMapper.selectAllOrderBySortOrder();
-        if (all == null) return null;
-        for (CategoryDo c : all) {
-            if (c.getName() != null && c.getName().equals(name)) {
-                return c.getId();
-            }
+        if (name == null) {
+            return null;
         }
-        for (CategoryDo c : all) {
-            if (c.getName() != null && c.getName().contains(name)) {
-                return c.getId();
-            }
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            return null;
         }
-        return null;
+        return categoryService.resolveIdByName(trimmed);
     }
 }
