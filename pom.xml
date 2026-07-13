@@ -105,6 +105,18 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- Redis（用于 AI 删除的一次性验证码，TTL 5 分钟） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Mail（QQ SMTP，用于发送删除验证码） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
