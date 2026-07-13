@@ -16,6 +16,33 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+  # Redis（用于 AI 删除验证 code，TTL 5 分钟）
+  # 占位：连接信息从环境变量读取。dev profile 可在 application-dev.yml 覆盖。
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: ${REDIS_TIMEOUT_MS}
+  # QQ SMTP（用于发送删除验证码）
+  mail:
+    host: ${QQ_MAIL_HOST:smtp.qq.com}
+    port: ${QQ_MAIL_PORT:465}
+    username: ${QQ_MAIL:NOT_SET}
+    password: ${QQ_AUTH_CODE:NOT_SET}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.tao.card_nav.entity
@@ -25,12 +52,13 @@ mybatis:
 server:
   port: ${SERVER_PORT:3002}
 
-# AI 删除卡片所需的确认指令。
-# 占位符从环境变量读取，dotenv 加载 .env 后会注入到 System Properties。
-# 注意：未配置 CARD_NAV_SECURITY_DELETE_CONFIRMATION 时应用启动失败（fail-fast）。
+# AI 删除卡片所需的接收邮箱（QQ 邮箱）。
+# 占位符从环境变量读取。NOT_SET 启动时 fail-fast（见 StartupConfig）。
+# 申请授权码：登录 QQ 邮箱 → 设置 → 账户 → POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务 → 开启服务 → 生成授权码
 card-nav:
   security:
     delete-confirmation: ${CARD_NAV_SECURITY_DELETE_CONFIRMATION}
+    delete-recipient-email: ${CARD_NAV_DELETE_RECIPIENT:NOT_SET}
 
 resilience4j:
   ratelimiter:
