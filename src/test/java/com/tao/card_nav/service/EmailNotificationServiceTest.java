@@ -17,6 +17,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * {@link EmailNotificationService} 单测（mock {@link JavaMailSender}）。
+ *
+ * <p>测的核心契约：
+ * <ul>
+ *   <li>正常路径发邮件成功</li>
+ *   <li>SMTP 抛 {@link MailSendException} → 抛 {@link BusinessException(EMAIL_SEND_FAILED)}</li>
+ *   <li>邮件 subject 含 "card-nav"；正文含 cardId 与 code（确保用户能看到关键信息）</li>
+ * </ul>
+ */
 class EmailNotificationServiceTest {
 
     private JavaMailSender mailSender;
@@ -26,10 +36,14 @@ class EmailNotificationServiceTest {
     void setUp() {
         mailSender = mock(JavaMailSender.class);
         service = new EmailNotificationService(mailSender);
+        // 用 ReflectionTestUtils 注入 @Value 字段（单元测试不启动 Spring 上下文）
         ReflectionTestUtils.setField(service, "fromEmail", "bot@qq.com");
         ReflectionTestUtils.setField(service, "recipientEmail", "admin@qq.com");
     }
 
+    /**
+     * 正常路径：调一次 JavaMailSender.send，不抛异常。
+     */
     @Test
     void sendDeleteCode_succeeds() {
         assertThatCode(() -> service.sendDeleteCode(42L, "123456"))
@@ -37,6 +51,11 @@ class EmailNotificationServiceTest {
         verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * SMTP 故障（{@link MailSendException}）：service 必须转为业务异常
+     * {@link ErrorCode#EMAIL_SEND_FAILED}，便于 GlobalExceptionHandler 返回 500
+     * 而不是泄露 MailSendException 内部信息。
+     */
     @Test
     void sendDeleteCode_mailSendException_throwsBusinessException() {
         doThrow(new MailSendException("smtp failure"))
@@ -47,6 +66,10 @@ class EmailNotificationServiceTest {
                 .extracting("code").isEqualTo(ErrorCode.EMAIL_SEND_FAILED.getCode());
     }
 
+    /**
+     * <b>内容契约</b>：邮件主题含 "card-nav"、正文含 cardId 与 code。
+     * 防止"邮件发出去了但用户不知道是干嘛的"。
+     */
     @Test
     void sendDeleteCode_subjectContainsCardNav() {
         service.sendDeleteCode(42L, "123456");
