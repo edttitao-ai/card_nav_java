@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tao.card_nav.mapper.CardDeleteHistoryDoMapper">
+  <resultMap id="BaseResultMap" type="com.tao.card_nav.entity.CardDeleteHistoryDo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="card_id" jdbcType="BIGINT" property="cardId" />
+    <result column="card_title" jdbcType="VARCHAR" property="cardTitle" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
+    <result column="operator_ip" jdbcType="VARCHAR" property="operatorIp" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+  </resultMap>
+
+  <insert id="insertSelective" parameterType="com.tao.card_nav.entity.CardDeleteHistoryDo"
+          useGeneratedKeys="true" keyProperty="id">
+    insert into card_delete_history
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="cardId != null">card_id,</if>
+      <if test="cardTitle != null">card_title,</if>
+      <if test="status != null">status,</if>
+      <if test="reason != null">reason,</if>
+      <if test="operatorIp != null">operator_ip,</if>
+      <if test="createdAt != null">created_at,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="cardId != null">#{cardId,jdbcType=BIGINT},</if>
+      <if test="cardTitle != null">#{cardTitle,jdbcType=VARCHAR},</if>
+      <if test="status != null">#{status,jdbcType=VARCHAR},</if>
+      <if test="reason != null">#{reason,jdbcType=VARCHAR},</if>
+      <if test="operatorIp != null">#{operatorIp,jdbcType=VARCHAR},</if>
+      <if test="createdAt != null">#{createdAt,jdbcType=TIMESTAMP},</if>
+    </trim>
+  </insert>
+
+  <select id="selectAllOrderByCreatedAtDesc" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select id, card_id, card_title, status, reason, operator_ip, created_at
+    from card_delete_history
+    order by created_at DESC
+    <if test="limit != null and limit > 0">
+      limit #{limit,jdbcType=INTEGER}
+    </if>
+  </select>
+</mapper>

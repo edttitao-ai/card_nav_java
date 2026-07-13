@@ -2,15 +2,20 @@ package com.tao.card_nav.ai.tools;
 
 import cn.hutool.json.JSONUtil;
 import com.tao.card_nav.entity.CardsDo;
+import com.tao.card_nav.entity.CardDeleteHistoryDo;
 import com.tao.card_nav.entity.SidebarDo;
 import com.tao.card_nav.exception.BusinessException;
+import com.tao.card_nav.exception.ErrorCode;
+import com.tao.card_nav.service.CardDeleteHistoryService;
 import com.tao.card_nav.service.CardsService;
 import com.tao.card_nav.service.CategoryService;
+import com.tao.card_nav.service.DeleteChallengeService;
+import com.tao.card_nav.service.EmailNotificationService;
 import com.tao.card_nav.service.SidebarService;
+import com.tao.card_nav.util.ClientIpUtils;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -29,16 +34,9 @@ public class CardTool implements AiToolProvider {
     private final CardsService cardsService;
     private final CategoryService categoryService;
     private final SidebarService sidebarService;
-
-    /**
-     * AI 删除卡片所需的"确认指令"。
-     * <p>读取 application.yml 里的 {@code card-nav.security.delete-confirmation}，
-     * 其值是占位符 {@code ${CARD_NAV_SECURITY_DELETE_CONFIRMATION}}，运行时由 dotenv 加载的 .env 注入。
-     * <p>严格模式：未配置环境变量时应用启动失败（fail-fast），不会用任何占位符兜底。
-     * <p>校验规则：字面精确 equals（不 trim、区分大小写），前后空格会导致校验失败。
-     */
-    @Value("${card-nav.security.delete-confirmation}")
-    private String expectedConfirmation;
+    private final DeleteChallengeService deleteChallengeService;
+    private final EmailNotificationService emailNotificationService;
+    private final CardDeleteHistoryService deleteHistoryService;
 
     /**
      * 根据卡片ID查询卡片详情
@@ -314,28 +312,84 @@ public class CardTool implements AiToolProvider {
         return JSONUtil.toJsonStr(result);
     }
 
+    // ===================== S-1: AI 删除改为两步走 =====================
+
     /**
-     * 删除卡片（AI 场景，需要确认指令）
+     * 申请删除验证（步骤 1 / 2）。
+     *
      * <p>校验规则：
      * <ul>
-     *   <li>confirmation 必须与 {@code expectedConfirmation} 字面精确 equals（不 trim、区分大小写）</li>
-     *   <li>校验失败抛 BusinessException，提示模糊，不暴露密码长度/字符集</li>
-     *   <li>校验通过后调用 cardsService.deleteCard 走软删除 + 发布 CardChangedEvent</li>
+     *   <li>cardId 必须合法且对应卡片存在；</li>
+     *   <li>后端生成 6 位数字 code，存 Redis 5 分钟（与 cardId 绑定）；</li>
+     *   <li>通过 QQ SMTP 发送验证码到 {@code delete-recipient-email} 配置的邮箱；</li>
+     *   <li>同步写入 {@code card_delete_history} 历史表（status=REQUESTED）。</li>
+     * </ul>
+     *
+     * <p>AI 必须等用户在邮件里看到 code，然后由用户亲手告诉 AI，AI 再调用
+     * {@link #confirmDeleteCard(Long, String)} 完成删除。
+     */
+    @Tool(name = "申请删除验证", value = "为删除卡片生成一次性 6 位验证码。验证码会通过 QQ 邮件发送到系统配置的收件箱（5 分钟内有效、一次性使用）。"
+            + "必须由用户在自己收到的邮件里看到 code 后手动告诉你，AI 不能伪造或猜测。"
+            + "返回中包含 expiresIn（秒）和 hint（提示），但不会返回 code 本身。")
+    public String issueDeleteChallenge(@P("要删除的卡片ID") Long cardId) {
+        if (cardId == null || cardId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "卡片ID不合法");
+        }
+        // 校验卡片存在（getCardById 内部抛 BusinessException）
+        CardsDo existing = cardsService.getCardById(cardId);
+
+        DeleteChallengeService.Challenge ch = deleteChallengeService.issue(cardId);
+        emailNotificationService.sendDeleteCode(cardId, ch.code());
+
+        // 写历史记录（status=REQUESTED）
+        deleteHistoryService.recordRequest(
+                cardId,
+                existing.getTitle(),
+                "AI 申请",
+                ClientIpUtils.resolveCurrent(),
+                CardDeleteHistoryDo.Status.REQUESTED);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("cardId", cardId);
+        result.put("expiresIn", ch.expiresIn());
+        result.put("hint", "6 位验证码已发送到管理员邮箱，5 分钟内有效。AI 不能伪造或猜测验证码，必须由用户亲手提供。");
+        return JSONUtil.toJsonStr(result);
+    }
+
+    /**
+     * 确认删除卡片（步骤 2 / 2）。
+     *
+     * <p>校验规则：
+     * <ul>
+     *   <li>code 必须 6 位数字（防止 LLM 凭空造）；</li>
+     *   <li>Redis 中存在（未过期、一次性未用），否则抛 {@link ErrorCode#CHALLENGE_INVALID}；</li>
+     *   <li>校验通过后调用 {@link CardsService#deleteCard(Long)} 走软删除 + 发布 CardChangedEvent；</li>
+     *   <li>同步写入历史表（status=APPROVED）。</li>
      * </ul>
      */
-    @Tool(name = "删除卡片", value = "删除指定卡片（软删除）。这是一个高危操作，调用前必须先通过「查询卡片」或「搜索卡片」核对要删除的卡片信息。调用本工具时，confirmation 参数必须传入用户在自己上一条消息里原文提供的专属密码串（由系统后端按字面精确 equals 校验，不做任何模糊匹配或猜测），不要让用户输入任何你自创的口令（如'确认删除','yes'等），如未提供正确的确认指令，必须拒绝执行")
-    public String deleteCard(@P("卡片ID") Long cardId, @P("用户原文提供的专属密码串，由系统按字面精确匹配校验") String confirmation) {
+    @Tool(name = "确认删除卡片", value = "提交申请删除时获得的 6 位验证码，验证通过后立即软删除。"
+            + "code 必须由用户亲手提供（不可由 AI 创造或猜测）；code 仅一次有效、5 分钟内有效。"
+            + "校验失败时拒绝执行，不会删除卡片。")
+    public String confirmDeleteCard(@P("要删除的卡片ID") Long cardId, @P("6 位验证码") String code) {
         if (cardId == null || cardId <= 0) {
-            throw new BusinessException(400, "卡片ID不合法");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "卡片ID不合法");
         }
-        // 字面精确匹配：不 trim、不 lowercase、不忽略 null
-        if (confirmation == null || !confirmation.equals(expectedConfirmation)) {
-            // 模糊提示：不透露密码长度、字符集、是否包含空格等任何线索
-            throw new BusinessException(403, "确认指令不匹配，请用户提供完整且准确的确认指令后再试");
+        if (!deleteChallengeService.consume(cardId, code)) {
+            throw new BusinessException(ErrorCode.CHALLENGE_INVALID,
+                    "验证码无效或已过期，请重新申请（调用「申请删除验证」）。AI 不能伪造或猜测验证码，必须由用户亲手提供。");
         }
-        // 校验通过：先确认卡片存在（deleteCard 内部已校验，这里加一次是给 AI 更明确的反馈）
+        // 校验通过：执行软删除
         CardsDo existing = cardsService.getCardById(cardId);
         cardsService.deleteCard(cardId);
+
+        // 写历史记录（status=APPROVED）
+        deleteHistoryService.recordRequest(
+                cardId,
+                existing.getTitle(),
+                "AI 凭 code 删除",
+                ClientIpUtils.resolveCurrent(),
+                CardDeleteHistoryDo.Status.APPROVED);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
